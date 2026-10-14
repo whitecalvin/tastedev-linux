@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {restartApp} from '../lib/app-restart.ts';
+const calls=[];
+const dependencies={packaged:true,authorize:async(...args)=>calls.push(['authorize',...args]),settings:()=>({version:'saved',host:'127.0.0.1',port:8791}),audit:async(...args)=>calls.push(['audit',...args]),helper:async(...args)=>{calls.push(['helper',...args]);return {scheduled:true,delaySeconds:3};}};
+await assert.rejects(restartApp({confirm:true,version:'saved'},{...dependencies,packaged:false}),{status:403});
+await assert.rejects(restartApp({confirm:false,version:'saved'},dependencies));
+await assert.rejects(restartApp({confirm:true,version:'saved',unit:'ssh.service'},dependencies));
+assert.equal(calls.length,0);
+await assert.rejects(restartApp({confirm:true,version:'old'},dependencies),{status:409});
+assert.equal(calls.some(call=>call[0]==='helper'),false);
+calls.length=0;
+await assert.rejects(restartApp({confirm:true,version:'saved'},{...dependencies,authorize:async()=>{throw Object.assign(Error('disabled'),{status:403});}}),{status:403});
+assert.equal(calls.length,0);
+const result=await restartApp({confirm:true,version:'saved'},dependencies);
+assert.deepEqual(result,{scheduled:true,delaySeconds:3,host:'127.0.0.1',port:8791});
+assert.deepEqual(calls.find(call=>call[0]==='helper'),['helper','service',{unit:'tastedev-linux.service',action:'restart',confirm:true}]);
+assert.deepEqual(calls[0],['authorize','serviceChanges',{sudo:true}]);
+assert.equal(calls.at(-1)[2],'scheduled');
+calls.length=0;
+await assert.rejects(restartApp({confirm:true,version:'saved'},{...dependencies,helper:async()=>{throw Error('sudo rejected');}}),/sudo rejected/);
+assert.equal(calls.at(-1)[2],'failed');
+console.log('app restart: PASS');
+
+calls.length=0;
+await assert.rejects(restartApp({confirm:true,version:'saved'},{...dependencies,helper:async()=>({scheduled:false})}),{status:503});
+assert.deepEqual(calls.filter(call=>call[0]==='audit').map(call=>call.slice(1)),[['app-restart','requested',true],['app-restart','failed',false]]);

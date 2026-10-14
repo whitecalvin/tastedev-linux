@@ -1,0 +1,16 @@
+import {aptRepositoryPath} from './apt-repository-path.ts';
+import {jsonRecord,textField} from './verification/http-json.ts';
+import {verificationWorkRoot} from './verification/work-directory.ts';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
+import assert from 'node:assert/strict';
+const root=await aptRepositoryPath(process.argv[2]||'');
+const manifest=jsonRecord(JSON.parse(await readFile(path.join(root,'manifest.json'),'utf8')));assert(typeof manifest.architecture==='string'&&typeof manifest.package==='string');assert(['amd64','arm64'].includes(manifest.architecture));assert(/^tastedev-linux_[a-zA-Z0-9.+-]+_(amd64|arm64)\.deb$/.test(manifest.package));
+const digest=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex'),index=`main/binary-${manifest.architecture}`,release=await readFile(path.join(root,'dists/stable/Release'),'utf8');
+const plain=await readFile(path.join(root,'dists/stable',index,'Packages')),gzip=await readFile(path.join(root,'dists/stable',index,'Packages.gz'));assert.deepEqual(gunzipSync(gzip),plain);
+for(const [name,bytes] of [[index+'/Packages',plain],[index+'/Packages.gz',gzip]] as const)assert(release.split('\n').includes(` ${digest(bytes)} ${bytes.length} ${name}`),'Release checksum/size mismatch');
+const packages=plain.toString(),filename='pool/main/t/tastedev-linux/'+manifest.package,bytes=await readFile(path.join(root,filename));assert.equal(digest(bytes),manifest.sha256);for(const field of [`Package: tastedev-linux`,`Version: ${manifest.version}`,`Architecture: ${manifest.architecture}`,`Filename: ${filename}`,`SHA256: ${manifest.sha256}`,`Size: ${bytes.length}`])assert(packages.split('\n').includes(field),'Index field mismatch');
+const result={status:'PASS',repository:root,sha256:manifest.sha256,checks:['package index identity and bytes','gzip index roundtrip','Release SHA-256 and file sizes'],signatureVerified:false,published:false,installed:false};
+const folder=path.join(verificationWorkRoot,'evidence');await mkdir(folder,{recursive:true,mode:0o700});const evidence=path.join(folder,'apt-repository-'+new Date().toISOString().replaceAll(':','-')+'.json');await writeFile(evidence,JSON.stringify(result,null,2)+'\n',{mode:0o600});process.stdout.write(JSON.stringify({...result,evidence})+'\n');

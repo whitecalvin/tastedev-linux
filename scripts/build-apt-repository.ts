@@ -1,0 +1,25 @@
+import {buildWorkspace} from './build-workspace.ts';
+import {jsonRecord,textField} from './verification/http-json.ts';
+import {mkdtemp,mkdir,copyFile,readFile,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {createHash} from 'node:crypto';
+import {gzip} from 'node:zlib';
+const exec=promisify(execFile),compress=promisify(gzip),hash=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
+const metadata=jsonRecord(JSON.parse(await readFile('package.json','utf8'))),version=textField(metadata,'version'),architecture=process.arch==='x64'?'amd64':process.arch==='arm64'?'arm64':null;
+if(!architecture||!/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.]+)?$/.test(version))throw Error('Unsupported package identity');
+const name=`tastedev-linux_${version}_${architecture}.deb`,source=process.argv[2]?path.resolve(process.argv[2]):path.resolve('dist',name),bytes=await readFile(source),checksum=hash(bytes);
+const expected=(await readFile(source+'.sha256','utf8')).split(/\s+/)[0];if(expected!==checksum)throw Error('Package checksum mismatch');
+const {stdout:identity}=await exec('/usr/bin/dpkg-deb',['-f',source,'Package','Version','Architecture']);
+for(const field of [`Package: tastedev-linux`,`Version: ${version}`,`Architecture: ${architecture}`])if(!identity.split('\n').includes(field))throw Error('Package metadata mismatch');
+const root=await mkdtemp(path.join(buildWorkspace,'apt-repository-')),pool='pool/main/t/tastedev-linux';await mkdir(path.join(root,pool),{recursive:true});await copyFile(source,path.join(root,pool,name));
+const relative=`dists/stable/main/binary-${architecture}`,index=path.join(root,relative);await mkdir(index,{recursive:true});
+const {stdout:packages}=await exec('/usr/bin/dpkg-scanpackages',['pool','/dev/null'],{cwd:root,maxBuffer:4194304});
+if(!packages.includes(`SHA256: ${checksum}\n`)||!packages.includes(`Filename: ${pool}/${name}\n`))throw Error('Package index identity mismatch');
+const plain=Buffer.from(packages),compressed=await compress(plain,{level:9});await writeFile(path.join(index,'Packages'),plain);await writeFile(path.join(index,'Packages.gz'),compressed);
+const entries:readonly (readonly [string,Buffer])[]=[[`${relative.slice(13)}/Packages`,plain],[`${relative.slice(13)}/Packages.gz`,compressed]];
+// Paths in Release are relative to dists/stable.
+const release=`Origin: Tastedev\nLabel: Tastedev Linux\nSuite: stable\nCodename: stable\nDate: ${new Date().toUTCString()}\nArchitectures: ${architecture}\nComponents: main\nDescription: Tastedev Linux packages\nSHA256:\n`+entries.map(([name,data])=>` ${hash(data)} ${data.length} ${name}\n`).join('');
+await writeFile(path.join(root,'dists/stable/Release'),release);
+const manifest={repository:root,package:name,architecture,version:version,sha256:checksum,signed:false,published:false,installed:false};await writeFile(path.join(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');process.stdout.write(JSON.stringify(manifest)+'\n');

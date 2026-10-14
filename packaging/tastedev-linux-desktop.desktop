@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Tastedev Linux
+Name[ko]=Tastedev Linux 서버 관리
+Comment=Linux server administration workspace
+Comment[ko]=Linux 서버 운영 관리 워크스페이스
+Exec=/usr/bin/tastedev-linux-desktop
+Icon=tastedev-linux
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=tastedev-linux

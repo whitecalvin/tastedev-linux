@@ -1,0 +1,25 @@
+import {toastTestModule,toastTestChildren,toastTestModuleWithReact} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+test('daemon SSR state survives hydration replay without duplicate queries and reconnect fetches fresh state',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../components/operations-panel.tsx',import.meta.url),'utf8'),{filename:'operations-panel.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const states=[],refs=[],callbacks=[],effects=[],pending=[];let si=0,ri=0,ci=0,ei=0;
+ const hooks={useState:initial=>{const index=si++;if(!(index in states))states[index]=initial;return[states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];},useRef:initial=>{const index=ri++;return refs[index]??(refs[index]={current:initial});},useCallback:(fn,deps)=>{const index=ci++;if(!callbacks[index]||deps.some((value,key)=>callbacks[index].deps[key]!==value))callbacks[index]={fn,deps};return callbacks[index].fn;},useEffect:(fn,deps)=>{const index=ei++;if(!effects[index]||deps.some((value,key)=>effects[index].deps[key]!==value))pending.push(()=>{effects[index]?.cleanup?.();effects[index]={fn,deps,cleanup:fn()};});}};
+ const native=createRequire(import.meta.url),module={exports:{}};
+ const require=name=>name==='./ui/toast-provider'?toastTestModule(require):name==='./console-types'?consoleTypes:name==='next/link'?{__esModule:true,default:'Link'}:name==='react'?hooks:name==='./language-provider'?{useLanguage:()=>({t:value=>value,locale:'ko'})}:name==='./ui/controls'?Object.fromEntries(['Button','Dropdown','TextInput','Checkbox','Switch','Badge'].map(key=>[key,key])):name.startsWith('./')?{__esModule:true,default:name}:name==='./node-apps'?{__esModule:true,default:'NodeApps'}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const calls=[],api=async action=>{calls.push(action);return {services:[{unit:'postgresql@18-live.service',configPath:'/etc/postgresql/18/live/postgresql.conf',ActiveState:'active',LoadState:'loaded'}],permissions:{admin:false}};};
+ let props={api,connected:true,initialTab:'services',initialData:{services:[{unit:'postgresql@18-seed.service',configPath:'/etc/postgresql/18/seed/postgresql.conf',ActiveState:'inactive',LoadState:'loaded'}],permissions:{admin:false}}};
+ const render=()=>{si=ri=ci=ei=0;return module.exports.default(props);},flush=()=>{while(pending.length)pending.shift()();};
+ const find=(tree,predicate)=>{if(!tree)return null;if(Array.isArray(tree))return tree.map(item=>find(item,predicate)).find(Boolean);if(predicate(tree))return tree;return find(toastTestChildren(tree),predicate);};
+ let tree=render();assert(JSON.stringify(tree).includes('postgresql@18-seed.service'));flush();tree=render();flush();assert.deepEqual(calls,[]);
+ for(const effect of effects){effect?.cleanup?.();if(effect)effect.cleanup=effect.fn();}tree=render();flush();assert.deepEqual(calls,[],'Strict Mode replay must not discard a valid server snapshot');
+ await find(tree,node=>node.props?.['aria-label']==='서비스 상태 조회').props.onClick();assert.deepEqual(calls,['operations']);assert(JSON.stringify(render()).includes('postgresql@18-live.service'));
+ props={...props,connected:false};render();flush();assert.equal(states[1].length,0);
+ props={...props,connected:true};render();flush();await Promise.resolve();await Promise.resolve();assert.deepEqual(calls,['operations','operations']);assert(JSON.stringify(render()).includes('postgresql@18-live.service'));
+ for(const effect of effects)effect?.cleanup?.();
+});

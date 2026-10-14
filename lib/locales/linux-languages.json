@@ -1,0 +1,1622 @@
+[
+  {
+    "id": "ko",
+    "label": "한국어",
+    "flag": "🇰🇷"
+  },
+  {
+    "id": "en",
+    "label": "English",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "ja",
+    "label": "日本語",
+    "flag": "🇯🇵"
+  },
+  {
+    "id": "zh",
+    "label": "简体中文",
+    "flag": "🇨🇳"
+  },
+  {
+    "id": "es",
+    "label": "Español",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "fr",
+    "label": "Français",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "de",
+    "label": "Deutsch",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "aa-DJ",
+    "label": "Afar (Djibouti)",
+    "flag": "🇩🇯"
+  },
+  {
+    "id": "aa-ER",
+    "label": "Afar (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "aa-ET",
+    "label": "Afar (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "af-ZA",
+    "label": "Afrikaans (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "agr-PE",
+    "label": "agr (Peru)",
+    "flag": "🇵🇪"
+  },
+  {
+    "id": "ak-GH",
+    "label": "Akan (Ghana)",
+    "flag": "🇬🇭"
+  },
+  {
+    "id": "am-ET",
+    "label": "Amharic (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "an-ES",
+    "label": "Aragonese (Spain)",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "anp-IN",
+    "label": "Angika (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ar-AE",
+    "label": "Arabic (United Arab Emirates)",
+    "flag": "🇦🇪"
+  },
+  {
+    "id": "ar-BH",
+    "label": "Arabic (Bahrain)",
+    "flag": "🇧🇭"
+  },
+  {
+    "id": "ar-DZ",
+    "label": "Arabic (Algeria)",
+    "flag": "🇩🇿"
+  },
+  {
+    "id": "ar-EG",
+    "label": "Arabic (Egypt)",
+    "flag": "🇪🇬"
+  },
+  {
+    "id": "ar-IN",
+    "label": "Arabic (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ar-IQ",
+    "label": "Arabic (Iraq)",
+    "flag": "🇮🇶"
+  },
+  {
+    "id": "ar-JO",
+    "label": "Arabic (Jordan)",
+    "flag": "🇯🇴"
+  },
+  {
+    "id": "ar-KW",
+    "label": "Arabic (Kuwait)",
+    "flag": "🇰🇼"
+  },
+  {
+    "id": "ar-LB",
+    "label": "Arabic (Lebanon)",
+    "flag": "🇱🇧"
+  },
+  {
+    "id": "ar-LY",
+    "label": "Arabic (Libya)",
+    "flag": "🇱🇾"
+  },
+  {
+    "id": "ar-MA",
+    "label": "Arabic (Morocco)",
+    "flag": "🇲🇦"
+  },
+  {
+    "id": "ar-OM",
+    "label": "Arabic (Oman)",
+    "flag": "🇴🇲"
+  },
+  {
+    "id": "ar-QA",
+    "label": "Arabic (Qatar)",
+    "flag": "🇶🇦"
+  },
+  {
+    "id": "ar-SA",
+    "label": "Arabic (Saudi Arabia)",
+    "flag": "🇸🇦"
+  },
+  {
+    "id": "ar-SD",
+    "label": "Arabic (Sudan)",
+    "flag": "🇸🇩"
+  },
+  {
+    "id": "ar-SS",
+    "label": "Arabic (South Sudan)",
+    "flag": "🇸🇸"
+  },
+  {
+    "id": "ar-SY",
+    "label": "Arabic (Syria)",
+    "flag": "🇸🇾"
+  },
+  {
+    "id": "ar-TN",
+    "label": "Arabic (Tunisia)",
+    "flag": "🇹🇳"
+  },
+  {
+    "id": "ar-YE",
+    "label": "Arabic (Yemen)",
+    "flag": "🇾🇪"
+  },
+  {
+    "id": "as-IN",
+    "label": "Assamese (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ast-ES",
+    "label": "Asturian (Spain)",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "ayc-PE",
+    "label": "ayc (Peru)",
+    "flag": "🇵🇪"
+  },
+  {
+    "id": "az-AZ",
+    "label": "Azerbaijani (Azerbaijan)",
+    "flag": "🇦🇿"
+  },
+  {
+    "id": "az-IR",
+    "label": "Azerbaijani (Iran)",
+    "flag": "🇮🇷"
+  },
+  {
+    "id": "be-BY",
+    "label": "Belarusian (Belarus)",
+    "flag": "🇧🇾"
+  },
+  {
+    "id": "bem-ZM",
+    "label": "Bemba (Zambia)",
+    "flag": "🇿🇲"
+  },
+  {
+    "id": "ber-DZ",
+    "label": "ber (Algeria)",
+    "flag": "🇩🇿"
+  },
+  {
+    "id": "ber-MA",
+    "label": "ber (Morocco)",
+    "flag": "🇲🇦"
+  },
+  {
+    "id": "bg-BG",
+    "label": "Bulgarian (Bulgaria)",
+    "flag": "🇧🇬"
+  },
+  {
+    "id": "bhb-IN",
+    "label": "bhb (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "bho-IN",
+    "label": "Bhojpuri (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "bho-NP",
+    "label": "Bhojpuri (Nepal)",
+    "flag": "🇳🇵"
+  },
+  {
+    "id": "bi-VU",
+    "label": "Bislama (Vanuatu)",
+    "flag": "🇻🇺"
+  },
+  {
+    "id": "bn-BD",
+    "label": "Bangla (Bangladesh)",
+    "flag": "🇧🇩"
+  },
+  {
+    "id": "bn-IN",
+    "label": "Bangla (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "bo-CN",
+    "label": "Tibetan (China)",
+    "flag": "🇨🇳"
+  },
+  {
+    "id": "bo-IN",
+    "label": "Tibetan (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "br-FR",
+    "label": "Breton (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "brx-IN",
+    "label": "Bodo (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "bs-BA",
+    "label": "Bosnian (Bosnia & Herzegovina)",
+    "flag": "🇧🇦"
+  },
+  {
+    "id": "byn-ER",
+    "label": "Blin (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "ca-AD",
+    "label": "Catalan (Andorra)",
+    "flag": "🇦🇩"
+  },
+  {
+    "id": "ca-ES",
+    "label": "Catalan (Spain)",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "ca-FR",
+    "label": "Catalan (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "ca-IT",
+    "label": "Catalan (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "ce-RU",
+    "label": "Chechen (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "chr-US",
+    "label": "Cherokee (United States)",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "ckb-IQ",
+    "label": "Central Kurdish (Iraq)",
+    "flag": "🇮🇶"
+  },
+  {
+    "id": "zh-TW",
+    "label": "Chinese (Taiwan)",
+    "flag": "🇹🇼"
+  },
+  {
+    "id": "crh-RU",
+    "label": "Crimean Tatar (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "crh-UA",
+    "label": "Crimean Tatar (Ukraine)",
+    "flag": "🇺🇦"
+  },
+  {
+    "id": "cs-CZ",
+    "label": "Czech (Czechia)",
+    "flag": "🇨🇿"
+  },
+  {
+    "id": "csb-PL",
+    "label": "Kashubian (Poland)",
+    "flag": "🇵🇱"
+  },
+  {
+    "id": "cv-RU",
+    "label": "Chuvash (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "cy-GB",
+    "label": "Welsh (United Kingdom)",
+    "flag": "🇬🇧"
+  },
+  {
+    "id": "da-DK",
+    "label": "Danish (Denmark)",
+    "flag": "🇩🇰"
+  },
+  {
+    "id": "de-AT",
+    "label": "Austrian German",
+    "flag": "🇦🇹"
+  },
+  {
+    "id": "de-BE",
+    "label": "German (Belgium)",
+    "flag": "🇧🇪"
+  },
+  {
+    "id": "de-CH",
+    "label": "Swiss High German",
+    "flag": "🇨🇭"
+  },
+  {
+    "id": "de-DE",
+    "label": "German (Germany)",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "de-IT",
+    "label": "German (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "de-LI",
+    "label": "German (Liechtenstein)",
+    "flag": "🇱🇮"
+  },
+  {
+    "id": "de-LU",
+    "label": "German (Luxembourg)",
+    "flag": "🇱🇺"
+  },
+  {
+    "id": "doi-IN",
+    "label": "Dogri (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "dsb-DE",
+    "label": "Lower Sorbian (Germany)",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "dv-MV",
+    "label": "Divehi (Maldives)",
+    "flag": "🇲🇻"
+  },
+  {
+    "id": "dz-BT",
+    "label": "Dzongkha (Bhutan)",
+    "flag": "🇧🇹"
+  },
+  {
+    "id": "el-CY",
+    "label": "Greek (Cyprus)",
+    "flag": "🇨🇾"
+  },
+  {
+    "id": "el-GR",
+    "label": "Greek (Greece)",
+    "flag": "🇬🇷"
+  },
+  {
+    "id": "en-AG",
+    "label": "English (Antigua & Barbuda)",
+    "flag": "🇦🇬"
+  },
+  {
+    "id": "en-AU",
+    "label": "Australian English",
+    "flag": "🇦🇺"
+  },
+  {
+    "id": "en-BW",
+    "label": "English (Botswana)",
+    "flag": "🇧🇼"
+  },
+  {
+    "id": "en-CA",
+    "label": "Canadian English",
+    "flag": "🇨🇦"
+  },
+  {
+    "id": "en-DK",
+    "label": "English (Denmark)",
+    "flag": "🇩🇰"
+  },
+  {
+    "id": "en-GB",
+    "label": "British English",
+    "flag": "🇬🇧"
+  },
+  {
+    "id": "en-HK",
+    "label": "English (Hong Kong SAR China)",
+    "flag": "🇭🇰"
+  },
+  {
+    "id": "en-IE",
+    "label": "English (Ireland)",
+    "flag": "🇮🇪"
+  },
+  {
+    "id": "en-IL",
+    "label": "English (Israel)",
+    "flag": "🇮🇱"
+  },
+  {
+    "id": "en-IN",
+    "label": "English (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "en-NG",
+    "label": "English (Nigeria)",
+    "flag": "🇳🇬"
+  },
+  {
+    "id": "en-NZ",
+    "label": "English (New Zealand)",
+    "flag": "🇳🇿"
+  },
+  {
+    "id": "en-PH",
+    "label": "English (Philippines)",
+    "flag": "🇵🇭"
+  },
+  {
+    "id": "en-SC",
+    "label": "English (Seychelles)",
+    "flag": "🇸🇨"
+  },
+  {
+    "id": "en-SE",
+    "label": "English (Sweden)",
+    "flag": "🇸🇪"
+  },
+  {
+    "id": "en-SG",
+    "label": "English (Singapore)",
+    "flag": "🇸🇬"
+  },
+  {
+    "id": "en-US",
+    "label": "American English",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "en-ZA",
+    "label": "English (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "en-ZM",
+    "label": "English (Zambia)",
+    "flag": "🇿🇲"
+  },
+  {
+    "id": "en-ZW",
+    "label": "English (Zimbabwe)",
+    "flag": "🇿🇼"
+  },
+  {
+    "id": "eo",
+    "label": "Esperanto",
+    "flag": "🌐"
+  },
+  {
+    "id": "eo-US",
+    "label": "Esperanto (United States)",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "es-AR",
+    "label": "Spanish (Argentina)",
+    "flag": "🇦🇷"
+  },
+  {
+    "id": "es-BO",
+    "label": "Spanish (Bolivia)",
+    "flag": "🇧🇴"
+  },
+  {
+    "id": "es-CL",
+    "label": "Spanish (Chile)",
+    "flag": "🇨🇱"
+  },
+  {
+    "id": "es-CO",
+    "label": "Spanish (Colombia)",
+    "flag": "🇨🇴"
+  },
+  {
+    "id": "es-CR",
+    "label": "Spanish (Costa Rica)",
+    "flag": "🇨🇷"
+  },
+  {
+    "id": "es-CU",
+    "label": "Spanish (Cuba)",
+    "flag": "🇨🇺"
+  },
+  {
+    "id": "es-DO",
+    "label": "Spanish (Dominican Republic)",
+    "flag": "🇩🇴"
+  },
+  {
+    "id": "es-EC",
+    "label": "Spanish (Ecuador)",
+    "flag": "🇪🇨"
+  },
+  {
+    "id": "es-ES",
+    "label": "European Spanish",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "es-GT",
+    "label": "Spanish (Guatemala)",
+    "flag": "🇬🇹"
+  },
+  {
+    "id": "es-HN",
+    "label": "Spanish (Honduras)",
+    "flag": "🇭🇳"
+  },
+  {
+    "id": "es-MX",
+    "label": "Mexican Spanish",
+    "flag": "🇲🇽"
+  },
+  {
+    "id": "es-NI",
+    "label": "Spanish (Nicaragua)",
+    "flag": "🇳🇮"
+  },
+  {
+    "id": "es-PA",
+    "label": "Spanish (Panama)",
+    "flag": "🇵🇦"
+  },
+  {
+    "id": "es-PE",
+    "label": "Spanish (Peru)",
+    "flag": "🇵🇪"
+  },
+  {
+    "id": "es-PR",
+    "label": "Spanish (Puerto Rico)",
+    "flag": "🇵🇷"
+  },
+  {
+    "id": "es-PY",
+    "label": "Spanish (Paraguay)",
+    "flag": "🇵🇾"
+  },
+  {
+    "id": "es-SV",
+    "label": "Spanish (El Salvador)",
+    "flag": "🇸🇻"
+  },
+  {
+    "id": "es-US",
+    "label": "Spanish (United States)",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "es-UY",
+    "label": "Spanish (Uruguay)",
+    "flag": "🇺🇾"
+  },
+  {
+    "id": "es-VE",
+    "label": "Spanish (Venezuela)",
+    "flag": "🇻🇪"
+  },
+  {
+    "id": "et-EE",
+    "label": "Estonian (Estonia)",
+    "flag": "🇪🇪"
+  },
+  {
+    "id": "eu-ES",
+    "label": "Basque (Spain)",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "eu-FR",
+    "label": "Basque (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "fa-IR",
+    "label": "Persian (Iran)",
+    "flag": "🇮🇷"
+  },
+  {
+    "id": "ff-SN",
+    "label": "Fula (Senegal)",
+    "flag": "🇸🇳"
+  },
+  {
+    "id": "fi-FI",
+    "label": "Finnish (Finland)",
+    "flag": "🇫🇮"
+  },
+  {
+    "id": "fil-PH",
+    "label": "Filipino (Philippines)",
+    "flag": "🇵🇭"
+  },
+  {
+    "id": "fo-FO",
+    "label": "Faroese (Faroe Islands)",
+    "flag": "🇫🇴"
+  },
+  {
+    "id": "fr-BE",
+    "label": "French (Belgium)",
+    "flag": "🇧🇪"
+  },
+  {
+    "id": "fr-CA",
+    "label": "Canadian French",
+    "flag": "🇨🇦"
+  },
+  {
+    "id": "fr-CH",
+    "label": "Swiss French",
+    "flag": "🇨🇭"
+  },
+  {
+    "id": "fr-FR",
+    "label": "French (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "fr-LU",
+    "label": "French (Luxembourg)",
+    "flag": "🇱🇺"
+  },
+  {
+    "id": "fur-IT",
+    "label": "Friulian (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "fy-DE",
+    "label": "Western Frisian (Germany)",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "fy-NL",
+    "label": "Western Frisian (Netherlands)",
+    "flag": "🇳🇱"
+  },
+  {
+    "id": "ga-IE",
+    "label": "Irish (Ireland)",
+    "flag": "🇮🇪"
+  },
+  {
+    "id": "gbm-IN",
+    "label": "gbm (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "gd-GB",
+    "label": "Scottish Gaelic (United Kingdom)",
+    "flag": "🇬🇧"
+  },
+  {
+    "id": "gez-ER",
+    "label": "Geez (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "gez-ET",
+    "label": "Geez (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "gl-ES",
+    "label": "Galician (Spain)",
+    "flag": "🇪🇸"
+  },
+  {
+    "id": "gu-IN",
+    "label": "Gujarati (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "gv-GB",
+    "label": "Manx (United Kingdom)",
+    "flag": "🇬🇧"
+  },
+  {
+    "id": "ha-NG",
+    "label": "Hausa (Nigeria)",
+    "flag": "🇳🇬"
+  },
+  {
+    "id": "hak-TW",
+    "label": "Hakka Chinese (Taiwan)",
+    "flag": "🇹🇼"
+  },
+  {
+    "id": "he-IL",
+    "label": "Hebrew (Israel)",
+    "flag": "🇮🇱"
+  },
+  {
+    "id": "hi-IN",
+    "label": "Hindi (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "hif-FJ",
+    "label": "Fiji Hindi (Fiji)",
+    "flag": "🇫🇯"
+  },
+  {
+    "id": "hne-IN",
+    "label": "hne (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "hr-HR",
+    "label": "Croatian (Croatia)",
+    "flag": "🇭🇷"
+  },
+  {
+    "id": "hsb-DE",
+    "label": "Upper Sorbian (Germany)",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "ht-HT",
+    "label": "Haitian Creole (Haiti)",
+    "flag": "🇭🇹"
+  },
+  {
+    "id": "hu-HU",
+    "label": "Hungarian (Hungary)",
+    "flag": "🇭🇺"
+  },
+  {
+    "id": "hy-AM",
+    "label": "Armenian (Armenia)",
+    "flag": "🇦🇲"
+  },
+  {
+    "id": "ia-FR",
+    "label": "Interlingua (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "id-ID",
+    "label": "Indonesian (Indonesia)",
+    "flag": "🇮🇩"
+  },
+  {
+    "id": "ig-NG",
+    "label": "Igbo (Nigeria)",
+    "flag": "🇳🇬"
+  },
+  {
+    "id": "ik-CA",
+    "label": "Inupiaq (Canada)",
+    "flag": "🇨🇦"
+  },
+  {
+    "id": "is-IS",
+    "label": "Icelandic (Iceland)",
+    "flag": "🇮🇸"
+  },
+  {
+    "id": "it-CH",
+    "label": "Italian (Switzerland)",
+    "flag": "🇨🇭"
+  },
+  {
+    "id": "it-IT",
+    "label": "Italian (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "iu-CA",
+    "label": "Inuktitut (Canada)",
+    "flag": "🇨🇦"
+  },
+  {
+    "id": "ja-JP",
+    "label": "Japanese (Japan)",
+    "flag": "🇯🇵"
+  },
+  {
+    "id": "ka-GE",
+    "label": "Georgian (Georgia)",
+    "flag": "🇬🇪"
+  },
+  {
+    "id": "kab-DZ",
+    "label": "Kabyle (Algeria)",
+    "flag": "🇩🇿"
+  },
+  {
+    "id": "kk-KZ",
+    "label": "Kazakh (Kazakhstan)",
+    "flag": "🇰🇿"
+  },
+  {
+    "id": "kl-GL",
+    "label": "Kalaallisut (Greenland)",
+    "flag": "🇬🇱"
+  },
+  {
+    "id": "km-KH",
+    "label": "Khmer (Cambodia)",
+    "flag": "🇰🇭"
+  },
+  {
+    "id": "kn-IN",
+    "label": "Kannada (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ko-KR",
+    "label": "Korean (South Korea)",
+    "flag": "🇰🇷"
+  },
+  {
+    "id": "kok-IN",
+    "label": "Konkani (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ks-IN",
+    "label": "Kashmiri (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ku-TR",
+    "label": "Kurdish (Türkiye)",
+    "flag": "🇹🇷"
+  },
+  {
+    "id": "kv-RU",
+    "label": "Komi (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "kw-GB",
+    "label": "Cornish (United Kingdom)",
+    "flag": "🇬🇧"
+  },
+  {
+    "id": "ky-KG",
+    "label": "Kyrgyz (Kyrgyzstan)",
+    "flag": "🇰🇬"
+  },
+  {
+    "id": "lb-LU",
+    "label": "Luxembourgish (Luxembourg)",
+    "flag": "🇱🇺"
+  },
+  {
+    "id": "lg-UG",
+    "label": "Ganda (Uganda)",
+    "flag": "🇺🇬"
+  },
+  {
+    "id": "li-BE",
+    "label": "Limburgish (Belgium)",
+    "flag": "🇧🇪"
+  },
+  {
+    "id": "li-NL",
+    "label": "Limburgish (Netherlands)",
+    "flag": "🇳🇱"
+  },
+  {
+    "id": "lij-IT",
+    "label": "Ligurian (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "ln-CD",
+    "label": "Lingala (Congo - Kinshasa)",
+    "flag": "🇨🇩"
+  },
+  {
+    "id": "lo-LA",
+    "label": "Lao (Laos)",
+    "flag": "🇱🇦"
+  },
+  {
+    "id": "lt-LT",
+    "label": "Lithuanian (Lithuania)",
+    "flag": "🇱🇹"
+  },
+  {
+    "id": "ltg-LV",
+    "label": "Latgalian (Latvia)",
+    "flag": "🇱🇻"
+  },
+  {
+    "id": "lv-LV",
+    "label": "Latvian (Latvia)",
+    "flag": "🇱🇻"
+  },
+  {
+    "id": "lzh-TW",
+    "label": "Literary Chinese (Taiwan)",
+    "flag": "🇹🇼"
+  },
+  {
+    "id": "mag-IN",
+    "label": "Magahi (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "mai-IN",
+    "label": "Maithili (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "mai-NP",
+    "label": "Maithili (Nepal)",
+    "flag": "🇳🇵"
+  },
+  {
+    "id": "mdf-RU",
+    "label": "Moksha (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "mfe-MU",
+    "label": "Morisyen (Mauritius)",
+    "flag": "🇲🇺"
+  },
+  {
+    "id": "mg-MG",
+    "label": "Malagasy (Madagascar)",
+    "flag": "🇲🇬"
+  },
+  {
+    "id": "chm-RU",
+    "label": "Mari (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "mi-NZ",
+    "label": "Māori (New Zealand)",
+    "flag": "🇳🇿"
+  },
+  {
+    "id": "miq-NI",
+    "label": "miq (Nicaragua)",
+    "flag": "🇳🇮"
+  },
+  {
+    "id": "mjw-IN",
+    "label": "mjw (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "mk-MK",
+    "label": "Macedonian (North Macedonia)",
+    "flag": "🇲🇰"
+  },
+  {
+    "id": "ml-IN",
+    "label": "Malayalam (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "mn-MN",
+    "label": "Mongolian (Mongolia)",
+    "flag": "🇲🇳"
+  },
+  {
+    "id": "mni-IN",
+    "label": "Manipuri (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "mnw-MM",
+    "label": "mnw (Myanmar [Burma])",
+    "flag": "🇲🇲"
+  },
+  {
+    "id": "mr-IN",
+    "label": "Marathi (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ms-MY",
+    "label": "Malay (Malaysia)",
+    "flag": "🇲🇾"
+  },
+  {
+    "id": "mt-MT",
+    "label": "Maltese (Malta)",
+    "flag": "🇲🇹"
+  },
+  {
+    "id": "my-MM",
+    "label": "Burmese (Myanmar [Burma])",
+    "flag": "🇲🇲"
+  },
+  {
+    "id": "nan-TW",
+    "label": "Min Nan Chinese (Taiwan)",
+    "flag": "🇹🇼"
+  },
+  {
+    "id": "nb-NO",
+    "label": "Norwegian Bokmål (Norway)",
+    "flag": "🇳🇴"
+  },
+  {
+    "id": "nds-DE",
+    "label": "Low German (Germany)",
+    "flag": "🇩🇪"
+  },
+  {
+    "id": "nds-NL",
+    "label": "Low Saxon",
+    "flag": "🇳🇱"
+  },
+  {
+    "id": "ne-NP",
+    "label": "Nepali (Nepal)",
+    "flag": "🇳🇵"
+  },
+  {
+    "id": "nhn-MX",
+    "label": "nhn (Mexico)",
+    "flag": "🇲🇽"
+  },
+  {
+    "id": "niu-NU",
+    "label": "Niuean (Niue)",
+    "flag": "🇳🇺"
+  },
+  {
+    "id": "niu-NZ",
+    "label": "Niuean (New Zealand)",
+    "flag": "🇳🇿"
+  },
+  {
+    "id": "nl-AW",
+    "label": "Dutch (Aruba)",
+    "flag": "🇦🇼"
+  },
+  {
+    "id": "nl-BE",
+    "label": "Flemish",
+    "flag": "🇧🇪"
+  },
+  {
+    "id": "nl-NL",
+    "label": "Dutch (Netherlands)",
+    "flag": "🇳🇱"
+  },
+  {
+    "id": "nn-NO",
+    "label": "Norwegian Nynorsk (Norway)",
+    "flag": "🇳🇴"
+  },
+  {
+    "id": "nr-ZA",
+    "label": "South Ndebele (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "nso-ZA",
+    "label": "Northern Sotho (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "oc-FR",
+    "label": "Occitan (France)",
+    "flag": "🇫🇷"
+  },
+  {
+    "id": "om-ET",
+    "label": "Oromo (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "om-KE",
+    "label": "Oromo (Kenya)",
+    "flag": "🇰🇪"
+  },
+  {
+    "id": "or-IN",
+    "label": "Odia (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "os-RU",
+    "label": "Ossetic (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "pa-IN",
+    "label": "Punjabi (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "pa-PK",
+    "label": "Punjabi (Pakistan)",
+    "flag": "🇵🇰"
+  },
+  {
+    "id": "pap-AW",
+    "label": "Papiamento (Aruba)",
+    "flag": "🇦🇼"
+  },
+  {
+    "id": "pap-CW",
+    "label": "Papiamento (Curaçao)",
+    "flag": "🇨🇼"
+  },
+  {
+    "id": "pl-PL",
+    "label": "Polish (Poland)",
+    "flag": "🇵🇱"
+  },
+  {
+    "id": "ps-AF",
+    "label": "Pashto (Afghanistan)",
+    "flag": "🇦🇫"
+  },
+  {
+    "id": "pt-BR",
+    "label": "Brazilian Portuguese",
+    "flag": "🇧🇷"
+  },
+  {
+    "id": "pt-PT",
+    "label": "European Portuguese",
+    "flag": "🇵🇹"
+  },
+  {
+    "id": "qu-PE",
+    "label": "Quechua (Peru)",
+    "flag": "🇵🇪"
+  },
+  {
+    "id": "raj-IN",
+    "label": "Rajasthani (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "rif-MA",
+    "label": "Riffian (Morocco)",
+    "flag": "🇲🇦"
+  },
+  {
+    "id": "ro-RO",
+    "label": "Romanian (Romania)",
+    "flag": "🇷🇴"
+  },
+  {
+    "id": "ru-RU",
+    "label": "Russian (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "ru-UA",
+    "label": "Russian (Ukraine)",
+    "flag": "🇺🇦"
+  },
+  {
+    "id": "rw-RW",
+    "label": "Kinyarwanda (Rwanda)",
+    "flag": "🇷🇼"
+  },
+  {
+    "id": "sa-IN",
+    "label": "Sanskrit (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "sah-RU",
+    "label": "Yakut (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "sat-IN",
+    "label": "Santali (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "sc-IT",
+    "label": "Sardinian (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "scn-IT",
+    "label": "Sicilian (Italy)",
+    "flag": "🇮🇹"
+  },
+  {
+    "id": "sd-IN",
+    "label": "Sindhi (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "sd-PK",
+    "label": "Sindhi (Pakistan)",
+    "flag": "🇵🇰"
+  },
+  {
+    "id": "se-NO",
+    "label": "Northern Sami (Norway)",
+    "flag": "🇳🇴"
+  },
+  {
+    "id": "sgs-LT",
+    "label": "Samogitian (Lithuania)",
+    "flag": "🇱🇹"
+  },
+  {
+    "id": "shn-MM",
+    "label": "Shan (Myanmar [Burma])",
+    "flag": "🇲🇲"
+  },
+  {
+    "id": "shs-CA",
+    "label": "shs (Canada)",
+    "flag": "🇨🇦"
+  },
+  {
+    "id": "si-LK",
+    "label": "Sinhala (Sri Lanka)",
+    "flag": "🇱🇰"
+  },
+  {
+    "id": "sid-ET",
+    "label": "Sidamo (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "sk-SK",
+    "label": "Slovak (Slovakia)",
+    "flag": "🇸🇰"
+  },
+  {
+    "id": "sl-SI",
+    "label": "Slovenian (Slovenia)",
+    "flag": "🇸🇮"
+  },
+  {
+    "id": "sm-WS",
+    "label": "Samoan (Samoa)",
+    "flag": "🇼🇸"
+  },
+  {
+    "id": "so-DJ",
+    "label": "Somali (Djibouti)",
+    "flag": "🇩🇯"
+  },
+  {
+    "id": "so-ET",
+    "label": "Somali (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "so-KE",
+    "label": "Somali (Kenya)",
+    "flag": "🇰🇪"
+  },
+  {
+    "id": "so-SO",
+    "label": "Somali (Somalia)",
+    "flag": "🇸🇴"
+  },
+  {
+    "id": "sq-AL",
+    "label": "Albanian (Albania)",
+    "flag": "🇦🇱"
+  },
+  {
+    "id": "sq-MK",
+    "label": "Albanian (North Macedonia)",
+    "flag": "🇲🇰"
+  },
+  {
+    "id": "sr-ME",
+    "label": "Montenegrin",
+    "flag": "🇲🇪"
+  },
+  {
+    "id": "sr-RS",
+    "label": "Serbian (Serbia)",
+    "flag": "🇷🇸"
+  },
+  {
+    "id": "ss-ZA",
+    "label": "Swati (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "ssy-ER",
+    "label": "Saho (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "st-ZA",
+    "label": "Southern Sotho (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "su-ID",
+    "label": "Sundanese (Indonesia)",
+    "flag": "🇮🇩"
+  },
+  {
+    "id": "sv-FI",
+    "label": "Swedish (Finland)",
+    "flag": "🇫🇮"
+  },
+  {
+    "id": "sv-SE",
+    "label": "Swedish (Sweden)",
+    "flag": "🇸🇪"
+  },
+  {
+    "id": "sw-KE",
+    "label": "Swahili (Kenya)",
+    "flag": "🇰🇪"
+  },
+  {
+    "id": "sw-TZ",
+    "label": "Swahili (Tanzania)",
+    "flag": "🇹🇿"
+  },
+  {
+    "id": "syr",
+    "label": "Syriac",
+    "flag": "🇮🇶"
+  },
+  {
+    "id": "szl-PL",
+    "label": "Silesian (Poland)",
+    "flag": "🇵🇱"
+  },
+  {
+    "id": "ta-IN",
+    "label": "Tamil (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ta-LK",
+    "label": "Tamil (Sri Lanka)",
+    "flag": "🇱🇰"
+  },
+  {
+    "id": "tcy-IN",
+    "label": "Tulu (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "te-IN",
+    "label": "Telugu (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "tg-TJ",
+    "label": "Tajik (Tajikistan)",
+    "flag": "🇹🇯"
+  },
+  {
+    "id": "th-TH",
+    "label": "Thai (Thailand)",
+    "flag": "🇹🇭"
+  },
+  {
+    "id": "the-NP",
+    "label": "the (Nepal)",
+    "flag": "🇳🇵"
+  },
+  {
+    "id": "ti-ER",
+    "label": "Tigrinya (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "ti-ET",
+    "label": "Tigrinya (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "tig-ER",
+    "label": "Tigre (Eritrea)",
+    "flag": "🇪🇷"
+  },
+  {
+    "id": "tk-TM",
+    "label": "Turkmen (Turkmenistan)",
+    "flag": "🇹🇲"
+  },
+  {
+    "id": "tn-ZA",
+    "label": "Tswana (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "to-TO",
+    "label": "Tongan (Tonga)",
+    "flag": "🇹🇴"
+  },
+  {
+    "id": "tok",
+    "label": "Toki Pona",
+    "flag": "🌐"
+  },
+  {
+    "id": "tpi-PG",
+    "label": "Tok Pisin (Papua New Guinea)",
+    "flag": "🇵🇬"
+  },
+  {
+    "id": "tr-CY",
+    "label": "Turkish (Cyprus)",
+    "flag": "🇨🇾"
+  },
+  {
+    "id": "tr-TR",
+    "label": "Turkish (Türkiye)",
+    "flag": "🇹🇷"
+  },
+  {
+    "id": "ts-ZA",
+    "label": "Tsonga (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "tt-RU",
+    "label": "Tatar (Russia)",
+    "flag": "🇷🇺"
+  },
+  {
+    "id": "ug-CN",
+    "label": "Uyghur (China)",
+    "flag": "🇨🇳"
+  },
+  {
+    "id": "uk-UA",
+    "label": "Ukrainian (Ukraine)",
+    "flag": "🇺🇦"
+  },
+  {
+    "id": "unm-US",
+    "label": "unm (United States)",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "ur-IN",
+    "label": "Urdu (India)",
+    "flag": "🇮🇳"
+  },
+  {
+    "id": "ur-PK",
+    "label": "Urdu (Pakistan)",
+    "flag": "🇵🇰"
+  },
+  {
+    "id": "uz-UZ",
+    "label": "Uzbek (Uzbekistan)",
+    "flag": "🇺🇿"
+  },
+  {
+    "id": "ve-ZA",
+    "label": "Venda (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "vi-VN",
+    "label": "Vietnamese (Vietnam)",
+    "flag": "🇻🇳"
+  },
+  {
+    "id": "wa-BE",
+    "label": "Walloon (Belgium)",
+    "flag": "🇧🇪"
+  },
+  {
+    "id": "wae-CH",
+    "label": "Walser (Switzerland)",
+    "flag": "🇨🇭"
+  },
+  {
+    "id": "wal-ET",
+    "label": "Wolaytta (Ethiopia)",
+    "flag": "🇪🇹"
+  },
+  {
+    "id": "wo-SN",
+    "label": "Wolof (Senegal)",
+    "flag": "🇸🇳"
+  },
+  {
+    "id": "xh-ZA",
+    "label": "Xhosa (South Africa)",
+    "flag": "🇿🇦"
+  },
+  {
+    "id": "yi-US",
+    "label": "Yiddish (United States)",
+    "flag": "🇺🇸"
+  },
+  {
+    "id": "yo-NG",
+    "label": "Yoruba (Nigeria)",
+    "flag": "🇳🇬"
+  },
+  {
+    "id": "yue-HK",
+    "label": "Cantonese (Hong Kong SAR China)",
+    "flag": "🇭🇰"
+  },
+  {
+    "id": "yuw-PG",
+    "label": "yuw (Papua New Guinea)",
+    "flag": "🇵🇬"
+  },
+  {
+    "id": "zgh-MA",
+    "label": "Standard Moroccan Tamazight (Morocco)",
+    "flag": "🇲🇦"
+  },
+  {
+    "id": "zh-CN",
+    "label": "Chinese (China)",
+    "flag": "🇨🇳"
+  },
+  {
+    "id": "zh-HK",
+    "label": "Chinese (Hong Kong SAR China)",
+    "flag": "🇭🇰"
+  },
+  {
+    "id": "zh-SG",
+    "label": "Chinese (Singapore)",
+    "flag": "🇸🇬"
+  },
+  {
+    "id": "zu-ZA",
+    "label": "Zulu (South Africa)",
+    "flag": "🇿🇦"
+  }
+]

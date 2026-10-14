@@ -1,0 +1,2 @@
+import {adminLockFixture} from './admin-lock-fixture.mjs';import {nativeFixture} from './admin-native-fixture.mjs';
+const base=process.argv[2],lock=await adminLockFixture(base),fd=lock.acquire(),native=await nativeFixture(base,fd);native.execFile('/usr/bin/sleep',['1.2'],{timeout:5000,env:{PATH:'/usr/bin:/bin',TASTEDEV_ADMIN_LOCK_FIXTURE_ROOT:base}},()=>{});process.stdout.write('ready\n');process.stdin.resume();

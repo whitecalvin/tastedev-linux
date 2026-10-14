@@ -1,0 +1,27 @@
+[Unit]
+Description=Tastedev Linux server management console
+After=network.target
+[Service]
+Type=simple
+User=tastedev-linux
+Group=tastedev-linux
+WorkingDirectory=/usr/lib/tastedev-linux
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=8791
+Environment=LINUX_PACKAGED=true
+Environment=LINUX_STATE_ROOT=/var/lib/tastedev-linux
+Environment=LINUX_AUTH_ROOT=/var/lib/tastedev-linux
+Environment=LINUX_WORKSPACE_ROOT=/var/lib/tastedev-linux/workspace
+Environment=LINUX_ENABLE_INSTALL=false
+Environment=LINUX_ENABLE_ADMIN=false
+Environment=LINUX_ENABLE_CRON=false
+Environment=LINUX_ENABLE_TERMINAL=false
+Environment=LINUX_ENABLE_AI=false
+EnvironmentFile=-/etc/tastedev-linux/environment
+ExecStart=/usr/bin/node /usr/lib/tastedev-linux/scripts/start-server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+[Install]
+WantedBy=multi-user.target

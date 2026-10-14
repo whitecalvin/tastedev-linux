@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-06",
+  "status": "PASS",
+  "tests": 1011,
+  "passed": 1011,
+  "failed": 0,
+  "skipped": 0,
+  "durationMs": 106616.607719,
+  "log": "/tmp/tastedev-regression-backup-20261006.log",
+  "sourceSha256": {
+    "lib/operations.mjs": "26fb165a3886d5f375bc1d000c228f5215b90c6bdf6c3f3aafac1d110d0cba56",
+    "lib/cron-lock.mjs": "3595ae078376cff4abd600f0001f45d58134b241a644641ce2dcb5e80f3f6940",
+    "lib/server-tools.mjs": "63eeb272302cd14e07e441360b61b048f2b5fa372e7b1518f5535c6dbb065dbd",
+    "lib/manual-backup-request.mjs": "df9bae630ee1097153c71829d6727304681a451946e1bdc347bcb52e623d75e8",
+    "components/operations-panel.jsx": "06b0321912b4408ee622ba41cb7a7317f154c90dc850f6ced24117c31f935ce0",
+    "lib/api.mjs": "7f529277621247e79328b509fdde6945b4c69c2d70253705a1f0c71e82af28ae",
+    "scripts/verification/cron-user-isolated.mjs": "005583e48af6b3d9e5b75eaca86e1816ea320a748131b4ed36543b1335599021"
+  },
+  "nativeCronHttpEvidence": ".runtime/verification/cron-user-isolated-2026-10-05T20-44-42.986Z/result.json",
+  "productionBuildAfterManualBackupChange": false,
+  "debVerificationPerformed": false
+}

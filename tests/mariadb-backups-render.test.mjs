@@ -1,0 +1,25 @@
+import {toastTestModule,toastTestChildren,toastTestModuleWithReact} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import React from 'react';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+test('MariaDB restore handler submits once and consumes confirmation immediately',async()=>{
+ const source=await readFile(new URL('../components/mariadb-backups.tsx',import.meta.url),'utf8');await loadBindings();
+ const compiled=await transform(source,{filename:'mariadb-backups.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const plan={id:'fixture',root:'/etc/mysql/my.cnf',fields:[],warnings:[],changed:true};
+ const state=[plan.root,plan,true,null,null,false,''];let cursor=0;
+ const hooks={...React,useState:initial=>{const index=cursor++;if(!(index in state))state[index]=initial;return[state[index],value=>{state[index]=value;}];},useRef:value=>({current:value}),useEffect:()=>{}};
+ const Button=()=>null,native=createRequire(import.meta.url),module={exports:{}};
+ const require=name=>name==='./ui/toast-provider'?toastTestModule(require):name==='./console-types'?consoleTypes:name==='react'?hooks:name==='./language-provider'?{useLanguage:()=>({t:text=>text})}:name==='./ui/controls'?{Button,Dropdown:()=>null}:name==='../lib/capabilities.ts'?{featureAllowed:()=>true,featureReason:()=>''}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ let resolve,calls=0;const events=[];
+ const tree=module.exports.default({connected:true,security:{},onBusy:value=>events.push(value),api:()=>{calls++;return new Promise(done=>{resolve=done;});}});
+ const buttons=[];function visit(node){if(!node||typeof node!=='object')return;if(node.type===Button)buttons.push(node);React.Children.forEach(toastTestChildren(node),visit);}visit(tree);
+ buttons.find(node=>node.props.children==='백업으로 복원').props.onClick();
+ const button=buttons.find(node=>node.props.children==='복원 및 재시작');assert(button);
+ const first=button.props.onClick();const second=button.props.onClick();assert.equal(calls,1);assert.equal(state[2],false);assert.equal(state[5],true);
+ resolve({backupId:'fixture'});await Promise.all([first,second]);assert.equal(state[5],false);assert.deepEqual(events,[true,false]);
+});

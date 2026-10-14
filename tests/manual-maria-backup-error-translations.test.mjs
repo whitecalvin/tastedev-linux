@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile,mkdtemp,writeFile,chmod,rm,symlink,unlink,link} from 'node:fs/promises';import path from 'node:path';import {createHash} from 'node:crypto';import {loadBindings,parse} from 'next/dist/build/swc/index.js';
+import {diagnosticCandidates} from '../scripts/verification/audit-runtime-copy.ts';import {translate,languageCatalog} from '../lib/i18n.ts';import {manualBackupRequest} from '../lib/manual-backup-request.ts';import {mariadbRecoveryBackup} from '../lib/mariadb-recovery-backup.ts';
+const locales=['en','ja','zh','de','fr','es','it','pt','ru','ar','tr','uk'];const localized=error=>{assert.equal(error.status,400);for(const locale of locales){assert.notEqual(translate(locale,error.message),error.message);assert(!/[가-힣]/.test(translate(locale,error.message)));}return true;};
+test('manual request and MariaDB recovery-backup errors have direct native entries',async()=>{
+ await loadBindings();const keys=new Set();for(const file of ['manual-backup-request','mariadb-recovery-backup']){const extension='.ts';const {literals}=diagnosticCandidates(await parse(await readFile(new URL('../lib/'+file+extension,import.meta.url),'utf8'),{filename:file+extension,...(extension==='.ts'?{syntax:'typescript'}:{})}));literals.forEach(key=>keys.add(key));}assert.equal(keys.size,2);for(const locale of locales)for(const key of keys){const catalog=languageCatalog(locale);assert(Object.hasOwn(catalog,key));assert.equal(translate(locale,key),catalog[key]);assert(!/[가-힣]/.test(catalog[key]));}
+});
+test('manual backup target rejects unknown kind and retains exact supported request semantics',()=>{
+ for(const value of [null,{},[],{kind:'postgresql'},{kind:'unknown'}])assert.throws(()=>manualBackupRequest(value),localized);assert.deepEqual(manualBackupRequest({kind:'cron',domain:'ignored'}),{kind:'cron'});assert.deepEqual(manualBackupRequest({kind:'nginx',domain:'EXAMPLE.invalid'}),{kind:'nginx',domain:'example.invalid'});
+});
+test('real private MariaDB backup rejects corrupt content, permissions and links without changing original fixture bytes',async()=>{
+ const root=await mkdtemp('/mnt/data/build/tastedev-linux/maria-backup-errors-'),id='aacdab81-2019-4b5a-9c8c-419a8bc80562',target='/etc/mysql/conf.d/app.cnf',file=path.join(root,id+'.json');const text='[mariadbd]\nport=3306\n',record={id,target,text,version:createHash('sha256').update(text).digest('hex'),createdAt:'2026-10-10T00:00:00Z'},uid=process.getuid();
+ try{
+  await writeFile(file,JSON.stringify(record),{mode:0o600});assert.deepEqual(await mariadbRecoveryBackup(id,root,uid,target),record);await assert.rejects(mariadbRecoveryBackup('../escape',root,uid,target),localized);
+  for(const corrupt of [Buffer.from('{fixture-private-marker'),Buffer.from([0xff]),Buffer.from(JSON.stringify({...record,version:'0'.repeat(64)})),Buffer.from(JSON.stringify({...record,target:'/etc/passwd'})),Buffer.from(JSON.stringify({...record,createdAt:'invalid'})),Buffer.from(JSON.stringify({...record,text:'a\0b'}))]){await writeFile(file,corrupt);await assert.rejects(mariadbRecoveryBackup(id,root,uid,target),localized);assert.deepEqual(await readFile(file),corrupt);}
+  await writeFile(file,JSON.stringify(record));await chmod(file,0o644);await assert.rejects(mariadbRecoveryBackup(id,root,uid,target),localized);await chmod(file,0o600);
+  const alias=path.join(root,'hard-copy.json');await link(file,alias);await assert.rejects(mariadbRecoveryBackup(id,root,uid,target),localized);await unlink(alias);
+  const bytes=await readFile(file);await unlink(file);const outside=path.join(root,'outside.json');await writeFile(outside,bytes,{mode:0o600});await symlink(outside,file);await assert.rejects(mariadbRecoveryBackup(id,root,uid,target),localized);assert.deepEqual(await readFile(outside),bytes);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

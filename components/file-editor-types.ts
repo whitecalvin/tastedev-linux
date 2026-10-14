@@ -1,0 +1,15 @@
+import type {HbaValues,HbaRule,HbaEntry} from '../lib/postgresql-hba.ts';
+export type {HbaValues,HbaRule,HbaEntry} from '../lib/postgresql-hba.ts';
+import type {PostgresqlSettingRow} from '../lib/postgresql-settings-text.ts';
+import type {MariaDBSettingRow} from '../lib/mariadb-settings-text.ts';
+import type {RedisSettingRow} from '../lib/redis-settings-text.ts';
+export type HbaPending = {raw: string; value: HbaValues};
+export type HbaRecord = {text: string; pendingSettingInputs?: Record<string,HbaPending>};
+export type FileFormat = 'postgresql' | 'mariadb' | 'redis';
+export type SettingRow = PostgresqlSettingRow | MariaDBSettingRow | RedisSettingRow;
+export type SettingAddition = {name: string; value: string; group: string; flag: boolean};
+export type RowPending = {raw: string; value: string; enabled: boolean; error?: string};
+export type AdditionPending = {raw: string; value: SettingAddition};
+export type FileSettingRecord = {text: string; name?: string; sourcePath?: string; pendingSettingInputs?: Record<string,RowPending | AdditionPending>};
+export type SettingDescription = {translated: boolean; paragraphs: string[]; language: string; fallbackLabel?: string; unavailable?: string; commentLabel?: string};
+export type SettingModel = {parse: (text: string) => SettingRow[]; update: (text: string,row: SettingRow,value: {value: string; enabled: boolean}) => string; append: (text: string,name: string,value: string,group?: string,flag?: boolean) => string};

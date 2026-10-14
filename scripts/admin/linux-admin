@@ -1,0 +1,2334 @@
+#!/usr/bin/node
+// Generated from checked TypeScript helper sources.
+// Install root-owned 0755; never execute a writable checkout through sudo.
+'use strict';
+// BEGIN TYPESCRIPT HELPER BOOTSTRAP
+const fs = require('node:fs');
+const path = require('node:path');
+const childProcess = require('node:child_process');
+const rawExecFileSync = childProcess.execFileSync;
+let adminNativeContext = null;
+const { randomUUID, createHash } = require('node:crypto');
+const BASE = '/var/lib/linux/admin';
+const MARK = '# Managed by LINUX\n';
+const units = [
+    'nginx.service',
+    'cron.service',
+    'certbot.timer',
+    'postgresql.service',
+    'mariadb.service',
+    'redis-server.service'
+];
+function fail(message, status = 400) {
+    throw Object.assign(new Error(message), {
+        status
+    });
+}
+// END TYPESCRIPT HELPER BOOTSTRAP
+// BEGIN TYPESCRIPT HELPER NATIVE EXEC
+function execFileSync(binary, args = [], options = {}) {
+    if (!adminNativeContext) return rawExecFileSync(binary, args, options);
+    const stdio = typeof options.stdio === 'string' || options.stdio === undefined ? [
+        options.stdio || 'pipe',
+        options.stdio || 'pipe',
+        options.stdio || 'pipe'
+    ] : options.stdio.slice(0, 3);
+    while(stdio.length < 3)stdio.push('pipe');
+    return rawExecFileSync('/usr/bin/node', [
+        __filename,
+        '--native-lock-supervisor',
+        String(options.timeout || 300000),
+        binary,
+        ...args
+    ], {
+        ...options,
+        stdio: [
+            ...stdio,
+            adminNativeContext.fd
+        ]
+    });
+}
+function run(binary, args, timeout = 300000) {
+    const active = adminNativeContext, command = active ? '/usr/bin/node' : binary;
+    const parameters = active ? [
+        __filename,
+        '--native-lock-supervisor',
+        String(timeout),
+        binary,
+        ...args
+    ] : args;
+    const result = childProcess.spawnSync(command, parameters, {
+        encoding: 'utf8',
+        timeout,
+        maxBuffer: 2 * 1024 * 1024,
+        stdio: active ? [
+            'pipe',
+            'pipe',
+            'pipe',
+            active.fd
+        ] : [
+            'pipe',
+            'pipe',
+            'pipe'
+        ],
+        env: {
+            PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+            HOME: '/root',
+            LANG: 'C.UTF-8',
+            NODE_ENV: 'production',
+            DEBIAN_FRONTEND: 'noninteractive',
+            NEEDRESTART_MODE: 'l'
+        }
+    });
+    if (result.error) throw result.error;
+    const logs = (result.stdout || '') + (result.stderr || '');
+    if (result.status !== 0) throw Object.assign(Error('Native command failed' + (logs ? '\n' + logs : '')), {
+        status: result.status,
+        signal: result.signal
+    });
+    return logs;
+}
+// END TYPESCRIPT HELPER NATIVE EXEC
+// BEGIN TYPESCRIPT HELPER ERROR OUTPUT
+// Compiled and embedded in the root helper: error reporting must survive runtime checksum failures.
+function helperErrorOutput(error, action) {
+    const object = error !== null && typeof error === 'object';
+    const suppliedStatus = object && 'status' in error ? error.status : undefined;
+    const suppliedMessage = object && 'message' in error ? error.message : undefined;
+    const validStatus = typeof suppliedStatus === 'number' && [
+        400,
+        403,
+        404,
+        409,
+        422,
+        500,
+        503
+    ].includes(suppliedStatus);
+    const status = validStatus ? suppliedStatus : 500;
+    const message = validStatus && typeof suppliedMessage === 'string' && Buffer.byteLength(suppliedMessage) <= 2000 && !/[\0\r\n]/.test(suppliedMessage) ? suppliedMessage : '관리 작업을 완료하지 못했습니다.';
+    return JSON.stringify({
+        protocol: 'tastedev-helper-error-v1',
+        action,
+        status,
+        message
+    }) + '\n';
+}
+// END TYPESCRIPT HELPER ERROR OUTPUT
+// BEGIN TYPESCRIPT HELPER NGINX CONFIG
+// Standalone embedded helper code; these bindings are provided by the root helper.
+function hash(text) {
+    return createHash('sha256').update(text).digest('hex');
+}
+function domain(value) {
+    if (typeof value !== 'string' || value.length > 253 || !value.includes('.') || !value.split('.').every((p)=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(p))) fail('Invalid domain');
+    return value.toLowerCase();
+}
+function port(value) {
+    const n = Number(value);
+    if (!(typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) || !Number.isInteger(n) || n < 1 || n > 65535) fail('Invalid port');
+    return n;
+}
+function config(input) {
+    const name = domain(input.domain);
+    let content;
+    if (input.mode === 'proxy') content = `        proxy_pass http://127.0.0.1:${port(input.upstreamPort)};\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;`;
+    else if (input.mode === 'static' && typeof input.root === 'string' && /^\/[a-zA-Z0-9_./-]+$/.test(input.root) && !input.root.split('/').includes('..')) content = `        root ${input.root};\n        index index.html;\n        try_files $uri $uri/ =404;`;
+    else fail('Invalid site mode/root');
+    if (input.bodySize !== undefined) {
+        const size = typeof input.bodySize === 'number' || typeof input.bodySize === 'string' && /^\d+$/.test(input.bodySize) ? Number(input.bodySize) : NaN;
+        if (!Number.isInteger(size) || size < 0 || size > 65536) fail('Invalid upload limit');
+        content += `\n        client_max_body_size ${size}m;`;
+    }
+    for (const [key, directive] of [
+        [
+            'connectTimeout',
+            'proxy_connect_timeout'
+        ],
+        [
+            'readTimeout',
+            'proxy_read_timeout'
+        ]
+    ]){
+        const value = input[key];
+        if (value !== undefined) {
+            const seconds = typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+            if (input.mode !== 'proxy' || !Number.isInteger(seconds) || seconds < 1 || seconds > 3600) fail('Invalid proxy timeout');
+            content += `\n        ${directive} ${seconds}s;`;
+        }
+    }
+    return `${MARK}server {\n    listen ${port(input.port)};\n    server_name ${name};\n\n    location / {\n${content}\n    }\n}\n`;
+}
+function updateConfig(input, previous) {
+    const next = config(input);
+    if (previous === null) {
+        if (input.version) fail('Current config missing; reload the live site');
+        return next;
+    }
+    if (input.version !== hash(previous)) fail('Current config changed; load the live site before editing');
+    const bodies = [
+        ...previous.matchAll(/^\s*location\s+\/\s*\{([\s\S]*?)^\s*\}/gm)
+    ];
+    if (bodies.length === 1) for (const line of bodies[0][1].split('\n')){
+        const value = line.trim();
+        if (!value || value.startsWith('#')) continue;
+        if (!/^(?:proxy_pass http:\/\/127\.0\.0\.1:\d+;|proxy_set_header (?:Host \$host|X-Real-IP \$remote_addr|X-Forwarded-For \$proxy_add_x_forwarded_for|X-Forwarded-Proto \$scheme);|root \/[a-zA-Z0-9_./-]+;|index index\.html;|try_files \$uri \$uri\/ =404;|client_max_body_size \d+m;|proxy_(?:connect|read)_timeout \d+s;)$/.test(value)) fail('Existing location contains settings the GUI cannot preserve');
+    }
+    if (!/^\s*(?:ssl_certificate\s|listen\s+[^;]*\bssl\b)/m.test(previous)) return next;
+    const listen = /^\s*listen (\d+)(?:\s|;)/m.exec(previous);
+    if (!listen || port(input.port) !== Number(listen[1])) fail('HTTPS listen port must be preserved');
+    const expression = /^\s*location\s+\/\s*\{[\s\S]*?^\s*\}/gm;
+    const oldLocations = [
+        ...previous.matchAll(expression)
+    ], newLocations = [
+        ...next.matchAll(expression)
+    ];
+    if (oldLocations.length !== 1 || newLocations.length !== 1) fail('HTTPS location cannot be edited safely; inspect the existing configuration');
+    const original = oldLocations[0][0];
+    if (original.slice(original.indexOf('{') + 1).includes('{')) fail('Nested locations require manual review');
+    return previous.slice(0, oldLocations[0].index) + newLocations[0][0] + previous.slice(oldLocations[0].index + original.length);
+}
+// END TYPESCRIPT HELPER NGINX CONFIG
+// BEGIN TYPESCRIPT HELPER NGINX FILES
+// Runtime bindings come from the root helper; emitted code has no module imports.
+function rootDir(dir) {
+    const stat = fs.lstatSync(dir);
+    if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== 0 || stat.mode & 0o022) fail('Directory must be root-owned and not group/world writable: ' + dir);
+}
+function target(name) {
+    rootDir('/etc/nginx');
+    rootDir('/etc/nginx/conf.d');
+    return '/etc/nginx/conf.d/linux-' + domain(name) + '.conf';
+}
+function current(file) {
+    try {
+        const stat = fs.lstatSync(file);
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== 0 || stat.mode & 0o022 || stat.size > 262144) fail('Unsafe config file');
+        const text = fs.readFileSync(file, 'utf8');
+        if (!text.startsWith(MARK) && !text.startsWith('# Managed by LINUX\n')) fail('Not LINUX managed');
+        return text;
+    } catch (error) {
+        if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
+        throw error;
+    }
+}
+function writeConfig(file, text) {
+    const temp = path.join(path.dirname(file), '.linux-' + randomUUID());
+    fs.writeFileSync(temp, text, {
+        mode: 0o644,
+        flag: 'wx'
+    });
+    try {
+        fs.renameSync(temp, file);
+    } catch (error) {
+        fs.unlinkSync(temp);
+        throw error;
+    }
+}
+function backup(file, text) {
+    const data = {
+        id: randomUUID(),
+        kind: 'nginx',
+        target: file,
+        text,
+        createdAt: new Date().toISOString(),
+        sha256: hash(text)
+    };
+    fs.writeFileSync(path.join(BASE, data.id + '.json'), JSON.stringify(data), {
+        mode: 0o600,
+        flag: 'wx'
+    });
+    return data;
+}
+function record(id) {
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)) fail('Invalid backup ID');
+    const file = path.join(BASE, id + '.json'), stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== 0 || stat.mode & 0o022 || stat.size > 2 * 1024 * 1024) fail('Unsafe backup');
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (data === null || typeof data !== 'object' || Array.isArray(data) || !('text' in data) || typeof data.text !== 'string' || !('target' in data) || typeof data.target !== 'string' || !('sha256' in data) || typeof data.sha256 !== 'string') fail('Invalid backup');
+    if (data.sha256 !== hash(data.text) || !/^\/etc\/nginx\/conf\.d\/linux-[a-z0-9.-]+\.conf$/.test(data.target)) fail('Invalid backup');
+    target(path.basename(data.target).slice(6, -5));
+    return {
+        ...data,
+        text: data.text,
+        target: data.target,
+        sha256: data.sha256
+    };
+}
+// END TYPESCRIPT HELPER NGINX FILES
+// BEGIN TYPESCRIPT HELPER POSTGRESQL FILES
+// Standalone code embedded in the privileged helper, using its checked runtime bindings.
+function helperPgObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function pgSync(file) {
+    const fd = fs.openSync(file, 'r');
+    try {
+        fs.fsyncSync(fd);
+    } finally{
+        fs.closeSync(fd);
+    }
+}
+function pgRun(binary, args) {
+    return run(binary, args, 60000);
+}
+function pgInput(input) {
+    if (input.confirm !== true || typeof input.path !== 'string' || typeof input.version !== 'string' || !/^[a-f0-9]{64}$/.test(input.version)) fail('PostgreSQL confirmation and version required');
+    const match = /^\/etc\/postgresql\/([1-9][0-9]?)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\/postgresql\.conf$/.exec(input.path);
+    if (!match) fail('Invalid PostgreSQL target');
+    const fields = {
+        port: [
+            'port',
+            1,
+            65535
+        ],
+        connections: [
+            'max_connections',
+            1,
+            10000
+        ],
+        sharedBuffers: [
+            'shared_buffers',
+            16,
+            65536
+        ],
+        workMem: [
+            'work_mem',
+            1,
+            4096
+        ]
+    };
+    if (!helperPgObject(input.changes) || !Object.keys(input.changes).length || Object.keys(input.changes).some((key)=>key !== 'logging' && !Object.hasOwn(fields, key))) fail('Invalid PostgreSQL fields');
+    const values = {};
+    for (const [key, value] of Object.entries(input.changes)){
+        if (key === 'logging') {
+            if (typeof value !== 'boolean') fail('Invalid PostgreSQL logging');
+            values.logging_collector = value ? 'on' : 'off';
+        } else {
+            const [name, min, max] = fields[key], number = Number(value);
+            if (!(typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) || !Number.isInteger(number) || number < min || number > max) fail('Invalid PostgreSQL numeric value');
+            values[name] = String(number) + (key === 'sharedBuffers' || key === 'workMem' ? 'MB' : '');
+        }
+    }
+    return {
+        version: match[1],
+        cluster: match[2],
+        file: input.path,
+        values
+    };
+}
+function pgOwner() {
+    const stat = fs.lstatSync('/usr/bin/id');
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0 || stat.mode & 0o022) fail('Unsafe account lookup binary');
+    const value = pgRun('/usr/bin/id', [
+        '-u',
+        'postgres'
+    ]).trim();
+    if (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) === 0) fail('Invalid PostgreSQL account');
+    return Number(value);
+}
+function pgDirectories(file, owner) {
+    rootDir('/etc');
+    for (const dir of [
+        '/etc/postgresql',
+        path.dirname(path.dirname(file)),
+        path.dirname(file)
+    ]){
+        const stat = fs.lstatSync(dir);
+        if (!stat.isDirectory() || stat.isSymbolicLink() || ![
+            0,
+            owner
+        ].includes(stat.uid) || stat.mode & 0o022) fail('Unsafe PostgreSQL configuration directory');
+    }
+}
+function pgRead(file) {
+    const owner = pgOwner();
+    pgDirectories(file, owner);
+    const safe = (stat)=>stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 && [
+            0,
+            owner
+        ].includes(stat.uid) && !(stat.mode & 0o022) && stat.size <= 262144;
+    const metadataKeys = [
+        'dev',
+        'ino',
+        'uid',
+        'gid',
+        'mode',
+        'size',
+        'mtimeMs',
+        'ctimeMs'
+    ];
+    const same = (a, b)=>metadataKeys.every((key)=>a[key] === b[key]);
+    const before = fs.lstatSync(file);
+    if (!safe(before)) fail('Unsafe PostgreSQL configuration file');
+    const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+    try {
+        const stat = fs.fstatSync(fd);
+        if (!safe(stat) || !same(before, stat)) fail('PostgreSQL configuration changed');
+        const bytes = Buffer.alloc(262145);
+        let length = 0;
+        while(length < bytes.length){
+            const count = fs.readSync(fd, bytes, length, bytes.length - length, null);
+            if (!count) break;
+            length += count;
+        }
+        if (length > 262144) fail('PostgreSQL configuration too large');
+        const content = bytes.subarray(0, length), text = content.toString('utf8');
+        if (text.includes('\0') || !Buffer.from(text, 'utf8').equals(content)) fail('Invalid PostgreSQL configuration');
+        pgDirectories(file, owner);
+        if (!same(stat, fs.fstatSync(fd)) || !same(stat, fs.lstatSync(file))) fail('PostgreSQL configuration changed');
+        return {
+            text,
+            stat,
+            version: hash(text)
+        };
+    } finally{
+        fs.closeSync(fd);
+    }
+}
+function pgService(input) {
+    const match = typeof input.path === 'string' ? /^\/etc\/postgresql\/([1-9][0-9]?)\/([a-zA-Z0-9][a-zA-Z0-9_-]{0,254})\/postgresql\.conf$/.exec(input.path) : null;
+    if (!match || typeof input.path !== 'string' || input.unit !== 'postgresql@' + match[1] + '-' + match[2] + '.service' || typeof input.action !== 'string' || ![
+        'start',
+        'stop',
+        'restart',
+        'reload'
+    ].includes(input.action) || input.confirm !== true) fail('Invalid PostgreSQL service operation');
+    pgRead(input.path);
+    const logs = pgRun('/usr/bin/pg_ctlcluster', [
+        match[1],
+        match[2],
+        input.action
+    ]);
+    return {
+        changed: true,
+        unit: input.unit,
+        logs
+    };
+}
+function pgStage(file, text, stat) {
+    const temp = path.join(path.dirname(file), '.tastedev-config-' + randomUUID());
+    fs.writeFileSync(temp, text, {
+        mode: 0o600,
+        flag: 'wx'
+    });
+    try {
+        fs.chownSync(temp, stat.uid, stat.gid);
+        fs.chmodSync(temp, stat.mode & 0o777);
+        const fd = fs.openSync(temp, 'r');
+        try {
+            fs.fsyncSync(fd);
+        } finally{
+            fs.closeSync(fd);
+        }
+        return temp;
+    } catch (error) {
+        fs.unlinkSync(temp);
+        throw error;
+    }
+}
+function pgReplace(file, text, expected) {
+    const temp = pgStage(file, text, expected.stat);
+    try {
+        const now = pgRead(file);
+        if (now.version !== expected.version || now.stat.ino !== expected.stat.ino || now.stat.dev !== expected.stat.dev) fail('PostgreSQL configuration changed');
+        fs.renameSync(temp, file);
+        pgSync(path.dirname(file));
+    } finally{
+        if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    }
+}
+function pgApply(input, restoreText = null) {
+    const p = pgInput(input), dir = path.dirname(p.file);
+    const original = pgRead(p.file);
+    if (original.version !== input.version) fail('PostgreSQL configuration changed');
+    try {
+        pgRun('/usr/bin/pg_ctlcluster', [
+            p.version,
+            p.cluster,
+            'status'
+        ]);
+    } catch  {
+        fail('PostgreSQL cluster must be running');
+    }
+    const seen = new Set();
+    let text = original.text.replace(/^(\s*)([a-zA-Z_]+)\s*=\s*(.*)$/gm, (line, space, key, value)=>{
+        if (!Object.hasOwn(p.values, key)) return line;
+        seen.add(key);
+        const comment = /\s+#.*$/.exec(value)?.[0] || '';
+        return space + key + ' = ' + (/MB$/.test(p.values[key]) ? "'" + p.values[key] + "'" : p.values[key]) + comment;
+    });
+    const missing = Object.keys(p.values).filter((key)=>!seen.has(key));
+    if (missing.length) text += (text && !text.endsWith('\n') ? '\n' : '') + missing.map((key)=>key + ' = ' + (/MB$/.test(p.values[key]) ? "'" + p.values[key] + "'" : p.values[key]) + '\n').join('');
+    if (restoreText !== null) text = restoreText;
+    if (text === original.text) return {
+        changed: false,
+        version: original.version
+    };
+    if (Buffer.byteLength(text) > 262144) fail('PostgreSQL configuration too large');
+    const staged = pgStage(p.file, text, original.stat);
+    try {
+        for (const [key, value] of Object.entries(p.values)){
+            const result = pgRun('/usr/sbin/runuser', [
+                '-u',
+                'postgres',
+                '--',
+                '/usr/lib/postgresql/' + p.version + '/bin/postgres',
+                '-D',
+                dir,
+                '-c',
+                'config_file=' + staged,
+                '-C',
+                key
+            ]).trim();
+            const expected = key === 'shared_buffers' ? Number(value.slice(0, -2)) * 128 : key === 'work_mem' ? Number(value.slice(0, -2)) * 1024 : value;
+            if (restoreText === null && String(expected) !== result) fail('PostgreSQL candidate resolves to a different value');
+        }
+    } catch  {
+        fail('PostgreSQL candidate validation failed');
+    } finally{
+        fs.unlinkSync(staged);
+    }
+    const backups = path.join(BASE, 'postgresql');
+    fs.mkdirSync(backups, {
+        mode: 0o700,
+        recursive: true
+    });
+    rootDir(backups);
+    if (fs.lstatSync(backups).mode & 0o077) fail('PostgreSQL backups must be private');
+    const backupId = randomUUID();
+    fs.writeFileSync(path.join(backups, backupId + '.json'), JSON.stringify({
+        id: backupId,
+        kind: 'postgresql',
+        target: p.file,
+        text: original.text,
+        version: original.version,
+        createdAt: new Date().toISOString()
+    }), {
+        mode: 0o600,
+        flag: 'wx'
+    });
+    pgSync(path.join(backups, backupId + '.json'));
+    pgSync(backups);
+    pgReplace(p.file, text, original);
+    const applied = pgRead(p.file);
+    if (applied.version !== hash(text)) return {
+        changed: true,
+        failed: true,
+        restored: false,
+        recovered: false,
+        backupId,
+        reason: 'Configuration changed after replacement'
+    };
+    try {
+        pgRun('/usr/bin/pg_ctlcluster', [
+            p.version,
+            p.cluster,
+            'restart'
+        ]);
+        pgRun('/usr/bin/pg_ctlcluster', [
+            p.version,
+            p.cluster,
+            'status'
+        ]);
+        return {
+            changed: true,
+            version: applied.version,
+            backupId
+        };
+    } catch  {
+        try {
+            pgReplace(p.file, original.text, applied);
+        } catch  {
+            return {
+                changed: true,
+                failed: true,
+                restored: false,
+                recovered: false,
+                backupId,
+                reason: 'Activation failed; manual configuration recovery required'
+            };
+        }
+        try {
+            pgRun('/usr/bin/pg_ctlcluster', [
+                p.version,
+                p.cluster,
+                'restart'
+            ]);
+            pgRun('/usr/bin/pg_ctlcluster', [
+                p.version,
+                p.cluster,
+                'status'
+            ]);
+            return {
+                changed: false,
+                failed: true,
+                restored: true,
+                recovered: true,
+                version: original.version,
+                backupId
+            };
+        } catch  {
+            return {
+                changed: false,
+                failed: true,
+                restored: true,
+                recovered: false,
+                version: original.version,
+                backupId,
+                reason: 'Original configuration restored; cluster recovery failed'
+            };
+        }
+    }
+}
+// END TYPESCRIPT HELPER POSTGRESQL FILES
+// BEGIN TYPESCRIPT HELPER POSTGRESQL BACKUPS
+// Standalone implementation embedded in the privileged helper.
+function helperPgBackupObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function helperPgBackupValid(value, id) {
+    return helperPgBackupObject(value) && value.id === id && value.kind === 'postgresql' && typeof value.text === 'string' && !value.text.includes('\0') && Buffer.byteLength(value.text) <= 262144 && value.version === hash(value.text) && typeof value.target === 'string' && /^\/etc\/postgresql\/([1-9][0-9]?)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\/postgresql\.conf$/.test(value.target) && typeof value.createdAt === 'string' && Number.isFinite(Date.parse(value.createdAt));
+}
+function pgBackupRecord(id) {
+    if (typeof id !== 'string' || !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(id)) fail('Invalid PostgreSQL backup ID');
+    const dir = path.join(BASE, 'postgresql');
+    rootDir(dir);
+    if (fs.lstatSync(dir).mode & 0o077) fail('PostgreSQL backups must be private');
+    const file = path.join(dir, id + '.json'), stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== 0 || stat.mode & 0o077 || stat.size > 2097152) fail('Unsafe PostgreSQL backup');
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!helperPgBackupValid(data, id)) fail('Invalid PostgreSQL backup');
+    return data;
+}
+function pgPublicValues(text) {
+    const values = {}, allowed = new Set([
+        'port',
+        'max_connections',
+        'shared_buffers',
+        'work_mem',
+        'logging_collector'
+    ]);
+    for (const line of text.split(/\r?\n/)){
+        const match = /^\s*([a-z_]+)\s*=\s*(.*?)\s*(?:#.*)?$/.exec(line);
+        if (!match || !allowed.has(match[1])) continue;
+        const value = match[2].replace(/^'(.*)'$/, '$1');
+        delete values[match[1]];
+        if (match[1] === 'logging_collector') {
+            if (/^(on|off)$/i.test(value)) values[match[1]] = value.toLowerCase();
+        } else if (/^[0-9]+(?:[kmg]b)?$/i.test(value)) values[match[1]] = value;
+    }
+    return values;
+}
+function pgRestorePlan(input) {
+    const record = pgBackupRecord(input.id), current = pgRead(record.target), before = pgPublicValues(current.text), after = pgPublicValues(record.text);
+    return {
+        id: record.id,
+        target: record.target,
+        version: current.version,
+        backupVersion: record.version,
+        createdAt: record.createdAt,
+        changed: current.version !== record.version,
+        codeRestoreAvailable: helperPgBackupObject(record.context) && record.context.version === 1,
+        fields: [
+            ...new Set([
+                ...Object.keys(before),
+                ...Object.keys(after)
+            ])
+        ].map((key)=>({
+                key,
+                before: before[key] ?? null,
+                after: after[key] ?? null
+            })),
+        notice: '지원 항목만 표시하지만 복원은 선택한 백업의 전체 설정 파일을 교체하고 클러스터를 재시작합니다.'
+    };
+}
+function pgRestore(input) {
+    if (input.confirm !== true || typeof input.backupVersion !== 'string') fail('PostgreSQL restore confirmation required');
+    const record = pgBackupRecord(input.id);
+    if (record.version !== input.backupVersion) fail('PostgreSQL backup changed');
+    return pgApply({
+        path: record.target,
+        version: input.version,
+        confirm: true,
+        changes: {
+            port: 5432
+        }
+    }, record.text);
+}
+async function pgBackups(input = {}) {
+    if (input.path !== undefined && (typeof input.path !== 'string' || !/^\/etc\/postgresql\/[1-9][0-9]?\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,254}\/postgresql\.conf$/.test(input.path))) fail('Invalid PostgreSQL backup path');
+    const dir = path.join(BASE, 'postgresql');
+    try {
+        rootDir(dir);
+    } catch (error) {
+        if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return {
+            backups: [],
+            warnings: 0,
+            truncated: false
+        };
+        throw error;
+    }
+    if (fs.lstatSync(dir).mode & 0o077) fail('PostgreSQL backups must be private');
+    const names = fs.readdirSync(dir).filter((name)=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\.json$/.test(name));
+    let warnings = 0;
+    const backups = [];
+    for (const name of names.slice(0, 1000)){
+        try {
+            const file = path.join(dir, name), stat = fs.lstatSync(file);
+            if (!stat.isFile() || stat.isSymbolicLink() || ![
+                1,
+                2
+            ].includes(stat.nlink) || stat.uid !== 0 || stat.mode & 0o077 || stat.size > 2097152) throw Error('Unsafe PostgreSQL backup');
+            const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (!helperPgBackupValid(parsed, name.slice(0, -5))) throw Error('Invalid PostgreSQL backup');
+            let record = parsed;
+            if (stat.nlink === 2) {
+                const runtime = await mariaRuntime();
+                record = await runtime.postgresqlRecoveryBackup(record.id, dir, record.target);
+            }
+            if (input.path !== undefined && record.target !== input.path) continue;
+            backups.push({
+                id: record.id,
+                kind: 'postgresql',
+                target: record.target,
+                createdAt: record.createdAt,
+                bytes: Buffer.byteLength(record.text),
+                version: record.version
+            });
+        } catch  {
+            warnings++;
+        }
+    }
+    backups.sort((a, b)=>Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return {
+        backups: backups.slice(0, 100),
+        warnings,
+        truncated: names.length > 1000 || backups.length > 100
+    };
+}
+// END TYPESCRIPT HELPER POSTGRESQL BACKUPS
+// BEGIN TYPESCRIPT HELPER DATABASE BACKUPS
+// Standalone helper backup routines with existing privileged runtime bindings.
+function helperDatabaseErrorCode(error, code) {
+    return error !== null && typeof error === 'object' && 'code' in error && error.code === code;
+}
+function helperMariaBackupValid(value, id) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+    return 'id' in value && value.id === id && 'text' in value && typeof value.text === 'string' && !value.text.includes('\0') && Buffer.byteLength(value.text) <= 262144 && 'version' in value && value.version === hash(value.text) && 'target' in value && typeof value.target === 'string' && /^\/etc\/mysql\/(?:my\.cnf|mariadb\.cnf|(?:conf\.d|mariadb\.conf\.d)\/[A-Za-z0-9_-][A-Za-z0-9_.-]*\.cnf)$/.test(value.target) && 'createdAt' in value && typeof value.createdAt === 'string' && Number.isFinite(Date.parse(value.createdAt));
+}
+function mariaBackupRoot() {
+    rootDir(BASE);
+    const dir = path.join(BASE, 'mariadb');
+    try {
+        fs.mkdirSync(dir, {
+            mode: 0o700
+        });
+    } catch (error) {
+        if (!helperDatabaseErrorCode(error, 'EEXIST')) throw error;
+    }
+    rootDir(dir);
+    if (fs.lstatSync(dir).mode & 0o077) fail('MariaDB backups must be private');
+    return dir;
+}
+function redisBackupRoot() {
+    rootDir(BASE);
+    const dir = path.join(BASE, 'redis');
+    try {
+        fs.mkdirSync(dir, {
+            mode: 0o700
+        });
+    } catch (error) {
+        if (!helperDatabaseErrorCode(error, 'EEXIST')) throw error;
+    }
+    rootDir(dir);
+    if (fs.lstatSync(dir).mode & 0o077) fail('Redis backups must be private');
+    return dir;
+}
+function mariaBackupRecord(id) {
+    if (typeof id !== 'string' || !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(id)) fail('Invalid MariaDB backup ID');
+    const dir = path.join(BASE, 'mariadb');
+    rootDir(dir);
+    if (fs.lstatSync(dir).mode & 0o077) fail('MariaDB backups must be private');
+    const file = path.join(dir, id + '.json'), fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+    let data;
+    try {
+        const stat = fs.fstatSync(fd);
+        if (!stat.isFile() || stat.uid !== 0 || stat.nlink !== 1 || stat.mode & 0o077 || stat.size > 2097152) fail('Unsafe MariaDB backup');
+        data = JSON.parse(fs.readFileSync(fd, 'utf8'));
+    } finally{
+        fs.closeSync(fd);
+    }
+    if (!helperMariaBackupValid(data, id)) fail('Invalid MariaDB backup');
+    return data;
+}
+function mariaBackups() {
+    const dir = path.join(BASE, 'mariadb');
+    try {
+        rootDir(dir);
+    } catch (error) {
+        if (helperDatabaseErrorCode(error, 'ENOENT')) return {
+            backups: [],
+            warnings: 0,
+            truncated: false
+        };
+        throw error;
+    }
+    if (fs.lstatSync(dir).mode & 0o077) fail('MariaDB backups must be private');
+    const names = fs.readdirSync(dir).filter((name)=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\.json$/.test(name)), backups = [];
+    let warnings = 0;
+    for (const name of names.slice(0, 1000)){
+        try {
+            const record = mariaBackupRecord(name.slice(0, -5));
+            backups.push({
+                id: record.id,
+                kind: 'mariadb',
+                target: record.target,
+                createdAt: record.createdAt,
+                bytes: Buffer.byteLength(record.text),
+                version: record.version
+            });
+        } catch  {
+            warnings++;
+        }
+    }
+    backups.sort((a, b)=>Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return {
+        backups: backups.slice(0, 100),
+        warnings,
+        truncated: names.length > 1000 || backups.length > 100
+    };
+}
+// END TYPESCRIPT HELPER DATABASE BACKUPS
+// BEGIN TYPESCRIPT HELPER RUNTIME
+// Integrity-checked dynamic modules keep their actual TypeScript contracts.
+function helperRuntimeHashes(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+const mariaModules = [
+    'error-code.mjs',
+    'database-config-backup.mjs',
+    'postgresql-data-backup.mjs',
+    'postgresql-data-context.mjs',
+    'postgresql-data-operation.mjs',
+    'postgresql-config-backup.mjs',
+    'postgresql-backup-request.mjs',
+    'postgresql-cluster-status.mjs',
+    'postgresql-archive-candidate.mjs',
+    'postgresql-graph-archive.mjs',
+    'postgresql-code-restore.mjs',
+    'postgresql-code-recovery.mjs',
+    'postgresql-recovery-service.mjs',
+    'postgresql-recovery-backup.mjs',
+    'postgresql-code-request.mjs',
+    'postgresql-code-operation.mjs',
+    'postgresql-config-service.mjs',
+    'postgresql-config-inspect.mjs',
+    'postgresql-config-validation.mjs',
+    'postgresql-config-candidate.mjs',
+    'postgresql-work-directory.mjs',
+    'postgresql-config-graph.mjs',
+    'postgresql-settings-text.mjs',
+    'admin-native-exec.mjs',
+    'postgresql-hba-journal.mjs',
+    'postgresql-hba-operation.mjs',
+    'postgresql-hba-service.mjs',
+    'postgresql-hba-validate.mjs',
+    'postgresql-hba-sandbox.mjs',
+    'postgresql-hba-validation.mjs',
+    'postgresql-hba-candidate.mjs',
+    'postgresql-hba-graph.mjs',
+    'postgresql-hba-links.mjs',
+    'redis-recovery.mjs',
+    'redis-apply.mjs',
+    'redis-code-request.mjs',
+    'redis-code-operation.mjs',
+    'redis-config-hooks.mjs',
+    'redis-restore-request.mjs',
+    'redis-restore.mjs',
+    'redis-reviewed-apply.mjs',
+    'redis-reviewed-validation.mjs',
+    'redis-apply-request.mjs',
+    'redis-candidate.mjs',
+    'redis-work-directory.mjs',
+    'redis-sandbox-validation.mjs',
+    'redis-sandbox-plan.mjs',
+    'redis-sandbox-process.mjs',
+    'redis-sandbox-executables.mjs',
+    'redis-sandbox-review.mjs',
+    'redis-validation-error.mjs',
+    'redis-candidate-validation.mjs',
+    'redis-candidate-resources.mjs',
+    'redis-resource-review.mjs',
+    'redis-validation-runtime.mjs',
+    'redis-validation-process.mjs',
+    'redis-validation-probe.mjs',
+    'redis-validation-plan.mjs',
+    'redis-validation-binary.mjs',
+    'validation-identity-binary.mjs',
+    'redis-context-inspect.mjs',
+    'redis-service-inspect.mjs',
+    'redis-service-scope.mjs',
+    'nginx-recovery.mjs',
+    'nginx-config-restore-plan.mjs',
+    'config-diff.mjs',
+    'nginx-config-backups.mjs',
+    'nginx-config-restore.mjs',
+    'nginx-apply.mjs',
+    'nginx-candidate-validation.mjs',
+    'nginx-candidate.mjs',
+    'nginx-work-directory.mjs',
+    'nginx-context-review.mjs',
+    'nginx-file-update.mjs',
+    'nginx-config-paths.mjs',
+    'nginx-isolate-output.mjs',
+    'nginx-locale.mjs',
+    'nginx-operation-hooks.mjs',
+    'nginx-reviewed-apply.mjs',
+    'nginx-context-inspect.mjs',
+    'nginx-sites.mjs',
+    'nginx-site-request.mjs',
+    'nginx-site-operation.mjs',
+    'nginx-topology.mjs',
+    'nginx-include-links.mjs',
+    'nginx-syntax.mjs',
+    'nginx-server-presets.mjs',
+    'nginx-setting-name.mjs',
+    'nginx-service-inspect.mjs',
+    'nginx-service-scope.mjs',
+    'sudo-policy-inspect.mjs',
+    'sudo-policy-hooks.mjs',
+    'helper-actions.mjs',
+    'sudo-policy.mjs',
+    'sudo-policy-update.mjs',
+    'node-app-service-restore.mjs',
+    'node-app-service-recovery.mjs',
+    'node-app-service-backups.mjs',
+    'node-app-service-update.mjs',
+    'node-app-service-control.mjs',
+    'node-app-service-install.mjs',
+    'node-app-service-context.mjs',
+    'node-app-service-hooks.mjs',
+    'node-app-runtime.mjs',
+    'node-app-unit.mjs',
+    'node-app-profile.mjs',
+    'redis-topology.mjs',
+    'redis-backups.mjs',
+    'mariadb-recovery.mjs',
+    'mariadb-recovery-backup.mjs',
+    'mariadb-service-scope.mjs',
+    'mariadb-apply.mjs',
+    'mariadb-topology.mjs',
+    'mariadb-candidate.mjs',
+    'mariadb-config-hooks.mjs',
+    'mariadb-sandbox-validation.mjs',
+    'mariadb-code-request.mjs',
+    'mariadb-code-operation.mjs',
+    'config-transaction.mjs',
+    'config-operation-lease.mjs',
+    'config-journal.mjs',
+    'config-patch.mjs',
+    'config-live.mjs',
+    'mariadb-setting-groups.mjs',
+    'postgresql-hba-source.mjs',
+    'postgresql-hba-backups.mjs',
+    'config-value-parser.mjs',
+    'database-config-profile.mjs',
+    'config-schema.mjs',
+    'certificate-command.mjs',
+    'certificate-failure.mjs',
+    'certificate-execution.mjs',
+    'certificate-nginx-backup.mjs',
+    'nginx-config.mjs',
+    'postgresql-completed-restore.mjs',
+    'postgresql-graph-restore-journal.mjs',
+    'postgresql-graph-restore-review.mjs',
+    'postgresql-graph-restore-snapshot.mjs',
+    'postgresql-graph-restore-stages.mjs',
+    'postgresql-graph-swap-progress.mjs',
+    'postgresql-graph-swap.mjs',
+    'postgresql-restore-before-graph.mjs',
+    'postgresql-restore-service-context.mjs',
+    'postgresql-reviewed-graph-restore.mjs',
+    'postgresql-stage-directory.mjs',
+    'postgresql-graph-code-recovery.mjs',
+    'postgresql-graph-swap-recovery.mjs',
+    'postgresql-original-config-validation.mjs',
+    'postgresql-reviewed-graph-recovery.mjs',
+    'postgresql-restore-undo-backup.mjs',
+    'postgresql-completed-history.mjs'
+];
+async function mariaRuntime() {
+    // This action is available only from the reviewed packaged helper, never a checkout.
+    const home = '/usr/lib/tastedev-linux/scripts/admin';
+    if (__dirname !== home) fail('MariaDB requires the packaged root-owned helper');
+    for (const dir of [
+        '/usr',
+        '/usr/lib',
+        '/usr/lib/tastedev-linux',
+        '/usr/lib/tastedev-linux/scripts',
+        home,
+        home + '/runtime'
+    ])rootDir(dir);
+    const manifest = home + '/runtime/manifest.json';
+    function trusted(file) {
+        const st = fs.lstatSync(file);
+        if (!st.isFile() || st.isSymbolicLink() || st.uid !== 0 || st.nlink !== 1 || st.mode & 0o022 || st.size > 262144) fail('Unsafe admin runtime');
+        return fs.readFileSync(file);
+    }
+    const hashes = JSON.parse(trusted(manifest).toString('utf8'));
+    if (!helperRuntimeHashes(hashes)) fail('Invalid admin runtime manifest');
+    if (JSON.stringify(Object.keys(hashes).sort()) !== JSON.stringify([
+        ...mariaModules
+    ].sort())) fail('Invalid admin runtime manifest');
+    for (const name of mariaModules)if (hash(trusted(home + '/runtime/' + name)) !== hashes[name]) fail('Admin runtime checksum mismatch');
+    const { pathToFileURL } = require('node:url');
+    const { mariadbTopology } = await import(pathToFileURL(home + '/runtime/mariadb-topology.mjs').href);
+    const { mariaDBRecoveryPlan, recoverMariaDBConfiguration } = await import(pathToFileURL(home + '/runtime/mariadb-recovery.mjs').href);
+    const { mariadbServiceScope } = await import(pathToFileURL(home + '/runtime/mariadb-service-scope.mjs').href);
+    const { parseLiveConfig, readRedisConfigSource } = await import(pathToFileURL(home + '/runtime/config-live.mjs').href);
+    const { redisCodeOperationPlan, applyRedisCodeOperation } = await import(pathToFileURL(home + '/runtime/redis-code-operation.mjs').href);
+    const { postgresqlRecoveryBackup } = await import(pathToFileURL(home + '/runtime/postgresql-recovery-backup.mjs').href);
+    const { preparePostgresqlHistory, postgresqlCompletedHistory, importPostgresqlCompletedBackup } = await import(pathToFileURL(home + '/runtime/postgresql-completed-history.mjs').href);
+    const { preparePostgresqlCodeRestore, postgresqlCodeRestorePlan, restorePostgresqlCode } = await import(pathToFileURL(home + '/runtime/postgresql-code-restore.mjs').href);
+    const { preparePostgresqlCodeRecovery, postgresqlCodeRecoveryPlan, recoverPostgresqlCode } = await import(pathToFileURL(home + '/runtime/postgresql-code-recovery.mjs').href);
+    const { preparePostgresqlCode } = await import(pathToFileURL(home + '/runtime/postgresql-code-request.mjs').href);
+    const { postgresqlCodeOperationPlan, applyPostgresqlCodeOperation } = await import(pathToFileURL(home + '/runtime/postgresql-code-operation.mjs').href);
+    const { prepareMariaDBCode } = await import(pathToFileURL(home + '/runtime/mariadb-code-request.mjs').href);
+    const { mariadbCodeOperationPlan, applyMariaDBCodeOperation } = await import(pathToFileURL(home + '/runtime/mariadb-code-operation.mjs').href);
+    const { inspectMariaDBSandboxCandidate } = await import(pathToFileURL(home + '/runtime/mariadb-sandbox-validation.mjs').href);
+    const { applyMariaDBConfig } = await import(pathToFileURL(home + '/runtime/mariadb-apply.mjs').href);
+    const { redisTopology } = await import(pathToFileURL(home + '/runtime/redis-topology.mjs').href);
+    const { redisBackups, redisBackupRecord } = await import(pathToFileURL(home + '/runtime/redis-backups.mjs').href);
+    const { inspectSudoPolicy } = await import(pathToFileURL(home + '/runtime/sudo-policy-inspect.mjs').href);
+    const { sudoPolicyHooks } = await import(pathToFileURL(home + '/runtime/sudo-policy-hooks.mjs').href);
+    const { updateSudoPolicy } = await import(pathToFileURL(home + '/runtime/sudo-policy-update.mjs').href);
+    const { parseSudoPolicy } = await import(pathToFileURL(home + '/runtime/sudo-policy.mjs').href);
+    const { nodeServiceRecoveryPlan, recoverNodeAppService } = await import(pathToFileURL(home + '/runtime/node-app-service-recovery.mjs').href);
+    const { nodeServiceRestorePlan, restoreNodeAppService } = await import(pathToFileURL(home + '/runtime/node-app-service-restore.mjs').href);
+    const { nodeServiceBackups, nodeServiceBackupRecord } = await import(pathToFileURL(home + '/runtime/node-app-service-backups.mjs').href);
+    const { updateNodeAppService } = await import(pathToFileURL(home + '/runtime/node-app-service-update.mjs').href);
+    const { installNodeAppService } = await import(pathToFileURL(home + '/runtime/node-app-service-install.mjs').href);
+    const { nodeServiceCaller } = await import(pathToFileURL(home + '/runtime/node-app-service-context.mjs').href);
+    const { controlNodeAppService, inspectNodeAppService } = await import(pathToFileURL(home + '/runtime/node-app-service-control.mjs').href);
+    const { nodeAppServiceHooks, nodeAppServiceControlHooks } = await import(pathToFileURL(home + '/runtime/node-app-service-hooks.mjs').href);
+    const { createDatabaseConfigBackup } = await import(pathToFileURL(home + '/runtime/database-config-backup.mjs').href);
+    const { postgresqlDataOperation } = await import(pathToFileURL(home + '/runtime/postgresql-data-operation.mjs').href);
+    const { createPostgresqlConfigBackup } = await import(pathToFileURL(home + '/runtime/postgresql-config-backup.mjs').href);
+    const { createPostgresqlHbaBackup, postgresqlHbaBackups, postgresqlHbaRestoreDraft } = await import(pathToFileURL(home + '/runtime/postgresql-hba-backups.mjs').href);
+    const { postgresqlHbaOperationPlan, applyPostgresqlHbaOperation, recoverPostgresqlHbaOperation, postgresqlHbaRecoveryStatus } = await import(pathToFileURL(home + '/runtime/postgresql-hba-operation.mjs').href);
+    const { validatePostgresqlHba } = await import(pathToFileURL(home + '/runtime/postgresql-hba-validate.mjs').href);
+    const { readPostgresqlHba } = await import(pathToFileURL(home + '/runtime/postgresql-hba-source.mjs').href);
+    const { inspectNginxContext } = await import(pathToFileURL(home + '/runtime/nginx-context-inspect.mjs').href);
+    const { nginxSitePlan, applyNginxSite, nginxSiteRecoveryPlan, recoverNginxSite } = await import(pathToFileURL(home + '/runtime/nginx-site-operation.mjs').href);
+    const { applyReviewedNginx } = await import(pathToFileURL(home + '/runtime/nginx-reviewed-apply.mjs').href);
+    const { nginxConfigBackups, prepareNginxBackupLookup, createNginxConfigBackup } = await import(pathToFileURL(home + '/runtime/nginx-config-backups.mjs').href);
+    const { restoreNginxConfiguration } = await import(pathToFileURL(home + '/runtime/nginx-config-restore.mjs').href);
+    const { nginxRecoveryPlan, recoverNginxConfiguration } = await import(pathToFileURL(home + '/runtime/nginx-recovery.mjs').href);
+    const { nginxConfigRestorePlan } = await import(pathToFileURL(home + '/runtime/nginx-config-restore-plan.mjs').href);
+    const { redisRecoveryPlan, recoverRedisConfiguration } = await import(pathToFileURL(home + '/runtime/redis-recovery.mjs').href);
+    const { redisConfigHooks } = await import(pathToFileURL(home + '/runtime/redis-config-hooks.mjs').href);
+    const { applyReviewedRedis } = await import(pathToFileURL(home + '/runtime/redis-reviewed-apply.mjs').href);
+    const { restoreRedisConfig } = await import(pathToFileURL(home + '/runtime/redis-restore.mjs').href);
+    const { redisBackupRecord: readRedisRestoreRecord } = await import(pathToFileURL(home + '/runtime/redis-backups.mjs').href);
+    const { validateReviewedRedis } = await import(pathToFileURL(home + '/runtime/redis-reviewed-validation.mjs').href);
+    const { inspectRedisContext } = await import(pathToFileURL(home + '/runtime/redis-context-inspect.mjs').href);
+    const { backupCertificateNginx } = await import(pathToFileURL(home + '/runtime/certificate-nginx-backup.mjs').href);
+    const { certificateExecution } = await import(pathToFileURL(home + '/runtime/certificate-execution.mjs').href);
+    return {
+        nginxSitePlan,
+        applyNginxSite,
+        nginxSiteRecoveryPlan,
+        recoverNginxSite,
+        createDatabaseConfigBackup,
+        createPostgresqlConfigBackup,
+        postgresqlDataOperation,
+        postgresqlRecoveryBackup,
+        preparePostgresqlHistory,
+        postgresqlCompletedHistory,
+        importPostgresqlCompletedBackup,
+        preparePostgresqlCodeRestore,
+        postgresqlCodeRestorePlan,
+        restorePostgresqlCode,
+        preparePostgresqlCodeRecovery,
+        postgresqlCodeRecoveryPlan,
+        recoverPostgresqlCode,
+        preparePostgresqlCode,
+        postgresqlCodeOperationPlan,
+        applyPostgresqlCodeOperation,
+        prepareMariaDBCode,
+        mariadbCodeOperationPlan,
+        applyMariaDBCodeOperation,
+        inspectMariaDBSandboxCandidate,
+        redisCodeOperationPlan,
+        applyRedisCodeOperation,
+        certificateExecution,
+        backupCertificateNginx,
+        mariaDBRecoveryPlan,
+        recoverMariaDBConfiguration,
+        nginxRecoveryPlan,
+        recoverNginxConfiguration,
+        redisRecoveryPlan,
+        recoverRedisConfiguration,
+        nodeServiceRecoveryPlan,
+        recoverNodeAppService,
+        postgresqlHbaOperationPlan,
+        applyPostgresqlHbaOperation,
+        recoverPostgresqlHbaOperation,
+        postgresqlHbaRecoveryStatus,
+        validatePostgresqlHba,
+        createPostgresqlHbaBackup,
+        postgresqlHbaBackups,
+        postgresqlHbaRestoreDraft,
+        readPostgresqlHba,
+        readRedisConfigSource,
+        redisConfigHooks,
+        applyReviewedRedis,
+        restoreRedisConfig,
+        readRedisRestoreRecord,
+        validateReviewedRedis,
+        inspectRedisContext,
+        nginxConfigRestorePlan,
+        nginxConfigBackups,
+        prepareNginxBackupLookup,
+        createNginxConfigBackup,
+        restoreNginxConfiguration,
+        applyReviewedNginx,
+        inspectNginxContext,
+        inspectSudoPolicy,
+        sudoPolicyHooks,
+        updateSudoPolicy,
+        parseSudoPolicy,
+        nodeServiceBackupRecord,
+        nodeServiceRestorePlan,
+        restoreNodeAppService,
+        nodeServiceBackups,
+        updateNodeAppService,
+        inspectNodeAppService,
+        controlNodeAppService,
+        nodeAppServiceControlHooks,
+        installNodeAppService,
+        nodeServiceCaller,
+        nodeAppServiceHooks,
+        redisTopology,
+        redisBackupRecord,
+        redisBackups,
+        mariadbServiceScope,
+        mariadbTopology,
+        parseLiveConfig,
+        applyMariaDBConfig,
+        trusted
+    };
+}
+// END TYPESCRIPT HELPER RUNTIME
+// BEGIN TYPESCRIPT HELPER SERVICE OPERATIONS
+// Standalone service operations, embedded with the privileged helper bindings.
+const { TextDecoder: helperDatabaseTextDecoder } = require('node:util');
+function helperServiceErrorCode(error, code) {
+    return error !== null && typeof error === 'object' && 'code' in error && error.code === code;
+}
+async function mariaInspect(root, runtime, overrides = new Map()) {
+    if (typeof root !== 'string') fail('Invalid MariaDB main configuration');
+    const graph = await runtime.mariadbTopology(root, '/etc/mysql', overrides);
+    if (!graph.complete) fail('Inspect a complete MariaDB include graph');
+    const contents = new Map();
+    for (const file of graph.files){
+        let dir = path.dirname(file.path);
+        while(dir !== '/'){
+            rootDir(dir);
+            dir = path.dirname(dir);
+        }
+        const original = runtime.trusted(file.path), override = overrides.get(file.path);
+        if (overrides.has(file.path) && typeof override !== 'string') fail('Invalid MariaDB include override');
+        const bytes = override === undefined ? original : Buffer.from(override);
+        if (hash(bytes) !== file.version) fail('MariaDB include graph changed');
+        contents.set(file.path, new helperDatabaseTextDecoder('utf-8', {
+            fatal: true,
+            ignoreBOM: true
+        }).decode(bytes));
+    }
+    return {
+        graph,
+        contents
+    };
+}
+function mariaServiceSnapshot() {
+    function pid() {
+        const output = execFileSync('/usr/bin/systemctl', [
+            'show',
+            '--property=MainPID',
+            '--value',
+            'mariadb.service'
+        ], {
+            encoding: 'utf8',
+            timeout: 10000,
+            maxBuffer: 16384,
+            env: {
+                PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+                LANG: 'C.UTF-8',
+                NODE_ENV: 'production'
+            }
+        });
+        const value = typeof output === 'string' ? output.trim() : output.toString('utf8').trim();
+        if (!/^[1-9][0-9]{0,9}$/.test(value) || Number(value) > 2147483647) fail('MariaDB service process is unavailable');
+        return value;
+    }
+    function processIdentity(value) {
+        function readProc(leaf) {
+            const fd = fs.openSync('/proc/' + value + '/' + leaf, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+            try {
+                const buffer = Buffer.alloc(16385), size = fs.readSync(fd, buffer, 0, buffer.length, 0);
+                if (size > 16384) fail('MariaDB process metadata exceeds limit');
+                return new helperDatabaseTextDecoder('utf-8', {
+                    fatal: true
+                }).decode(buffer.subarray(0, size));
+            } finally{
+                fs.closeSync(fd);
+            }
+        }
+        const stat = readProc('stat'), close = stat.lastIndexOf(')'), start = stat.slice(close + 2).trim().split(/\s+/)[19], uid = /^Uid:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*$/m.exec(readProc('status'));
+        if (close < 0 || !/^\d+$/.test(start || '') || !uid || uid.slice(1).some((value)=>value !== uid[1])) fail('MariaDB process metadata changed');
+        return {
+            start,
+            uid: Number(uid[1])
+        };
+    }
+    const before = pid(), identity = processIdentity(before);
+    const executable = fs.readlinkSync('/proc/' + before + '/exe'), native = fs.realpathSync('/usr/sbin/mariadbd');
+    if (executable !== native || !native.startsWith('/usr/sbin/')) fail('MariaDB service executable differs from the validation binary');
+    let binaryParent = path.dirname(native);
+    while(binaryParent !== '/'){
+        rootDir(binaryParent);
+        binaryParent = path.dirname(binaryParent);
+    }
+    const binaryStat = fs.lstatSync(native);
+    if (!binaryStat.isFile() || binaryStat.uid !== 0 || binaryStat.mode & 0o022 || !(binaryStat.mode & 0o111)) fail('Unsafe MariaDB service executable');
+    const fd = fs.openSync('/proc/' + before + '/cmdline', fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+    let bytes;
+    try {
+        const buffer = Buffer.alloc(16385), count = fs.readSync(fd, buffer, 0, buffer.length, 0);
+        if (count > 16384) fail('MariaDB service arguments exceed limit');
+        bytes = buffer.subarray(0, count);
+    } finally{
+        fs.closeSync(fd);
+    }
+    if (pid() !== before) fail('MariaDB service process changed');
+    const argv = new helperDatabaseTextDecoder('utf-8', {
+        fatal: true
+    }).decode(bytes).split('\0');
+    if (argv.at(-1) === '') argv.pop();
+    function canonical(file) {
+        let current = file;
+        for(let depth = 0; depth < 16; depth++){
+            let parent = path.dirname(current);
+            while(parent !== '/'){
+                rootDir(parent);
+                parent = path.dirname(parent);
+            }
+            const stat = fs.lstatSync(current);
+            if (stat.uid !== 0 || stat.nlink !== 1) fail('Unsafe MariaDB main path');
+            if (stat.isSymbolicLink()) {
+                current = path.resolve(path.dirname(current), fs.readlinkSync(current));
+                if (!current.startsWith('/etc/')) fail('Unsafe MariaDB main link');
+                continue;
+            }
+            if (!stat.isFile() || stat.mode & 0o022 || ![
+                '/etc/mysql/my.cnf',
+                '/etc/mysql/mariadb.cnf'
+            ].includes(current)) fail('Unsafe MariaDB main file');
+            return current;
+        }
+        fail('MariaDB main link depth exceeded');
+    }
+    const final = processIdentity(before);
+    if (pid() !== before || JSON.stringify(final) !== JSON.stringify(identity)) fail('MariaDB process identity changed');
+    return {
+        argv,
+        canonical,
+        pid: Number(before),
+        ...identity,
+        identityVerified: true
+    };
+}
+async function mariaApply(input) {
+    if (input.confirm !== true) fail('MariaDB restart confirmation required');
+    const runtime = await mariaRuntime(), { graph } = await mariaInspect(input.root, runtime);
+    if (graph.version !== input.version) fail('MariaDB include graph changed');
+    return runtime.applyMariaDBConfig(input, {
+        candidateInspector: runtime.inspectMariaDBSandboxCandidate,
+        backupRoot: mariaBackupRoot(),
+        inspectService: async ()=>mariaServiceSnapshot(),
+        run: async (binary, args)=>{
+            try {
+                return execFileSync(binary, args, {
+                    encoding: 'utf8',
+                    timeout: 60000,
+                    maxBuffer: 2097152,
+                    env: {
+                        PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+                        LANG: 'C.UTF-8',
+                        NODE_ENV: 'production'
+                    }
+                });
+            } catch  {
+                fail('MariaDB command failed');
+            }
+        }
+    });
+}
+async function mariaRestore(input) {
+    if (input.confirm !== true) fail('MariaDB restore and restart confirmation required');
+    const record = mariaBackupRecord(input.id);
+    if (record.version !== input.backupVersion) fail('MariaDB backup changed');
+    const runtime = await mariaRuntime(), { graph } = await mariaInspect(input.root, runtime);
+    const selected = graph.files.find((file)=>file.path === record.target);
+    if (!selected || selected.version !== input.version || graph.version !== input.graphVersion) fail('MariaDB configuration changed');
+    await mariaInspect(input.root, runtime, new Map([
+        [
+            record.target,
+            record.text
+        ]
+    ]));
+    return runtime.applyMariaDBConfig({
+        root: input.root,
+        target: record.target,
+        version: input.graphVersion,
+        changes: {},
+        confirm: true
+    }, {
+        candidateInspector: runtime.inspectMariaDBSandboxCandidate,
+        restoreText: record.text,
+        backupRoot: BASE + '/mariadb',
+        inspectService: async ()=>mariaServiceSnapshot(),
+        run: async (binary, args)=>{
+            try {
+                return execFileSync(binary, args, {
+                    encoding: 'utf8',
+                    timeout: 60000,
+                    maxBuffer: 2097152,
+                    env: {
+                        PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+                        LANG: 'C.UTF-8',
+                        NODE_ENV: 'production'
+                    }
+                });
+            } catch  {
+                fail('MariaDB command failed');
+            }
+        }
+    });
+}
+async function mariaRestorePlan(input) {
+    if (typeof input.root !== 'string') fail('Invalid MariaDB main configuration');
+    const record = mariaBackupRecord(input.id), runtime = await mariaRuntime(), { graph, contents } = await mariaInspect(input.root, runtime);
+    const currentText = contents.get(record.target), selected = graph.files.find((file)=>file.path === record.target);
+    if (currentText === undefined || !selected) fail('Backup target is not included by the selected main');
+    const before = runtime.parseLiveConfig('mariadb', currentText), after = runtime.parseLiveConfig('mariadb', record.text);
+    const latest = await runtime.mariadbTopology(input.root);
+    if (!latest.complete || latest.version !== graph.version) fail('MariaDB include graph changed');
+    return {
+        id: record.id,
+        root: graph.root,
+        target: record.target,
+        version: selected.version,
+        graphVersion: graph.version,
+        backupVersion: record.version,
+        createdAt: record.createdAt,
+        changed: hash(currentText) !== record.version,
+        fields: [
+            ...new Set([
+                ...Object.keys(before.values),
+                ...Object.keys(after.values)
+            ])
+        ].map((key)=>({
+                key,
+                before: before.values[key] ?? null,
+                after: after.values[key] ?? null
+            })),
+        warnings: [
+            ...before.warnings,
+            ...after.warnings
+        ],
+        notice: '지원 항목만 비교합니다. 전체 파일 복원에는 include 연결과 지원 외 설정도 포함되므로 별도 후보 검사와 재시작 확인이 필요합니다.'
+    };
+}
+async function redisRestorePlan(input) {
+    for (const dir of [
+        '/var',
+        '/var/lib',
+        '/var/lib/linux',
+        '/var/lib/linux/admin',
+        '/etc',
+        '/etc/redis'
+    ])rootDir(dir);
+    const runtime = await mariaRuntime(), record = await runtime.redisBackupRecord(input.id), graph = await runtime.redisTopology();
+    if (!graph.complete) fail('Inspect a complete Redis include graph');
+    for (const file of graph.files){
+        let parent = path.dirname(file.path);
+        while(parent !== '/'){
+            rootDir(parent);
+            parent = path.dirname(parent);
+        }
+        if (hash(runtime.trusted(file.path)) !== file.version) fail('Redis include graph changed');
+    }
+    const current = runtime.trusted(record.target), text = new helperDatabaseTextDecoder('utf-8', {
+        fatal: true,
+        ignoreBOM: true
+    }).decode(current);
+    const restored = await runtime.redisTopology(record.target, '/etc/redis', new Map([
+        [
+            record.target,
+            record.text
+        ]
+    ]));
+    if (!restored.complete) fail('Resolve restored Redis include connections');
+    for (const file of restored.files){
+        let parent = path.dirname(file.path);
+        while(parent !== '/'){
+            rootDir(parent);
+            parent = path.dirname(parent);
+        }
+        const bytes = runtime.trusted(file.path);
+        if (file.path !== record.target && hash(bytes) !== file.version) fail('Restored Redis include graph changed');
+    }
+    if (hash(current) !== graph.files.find((file)=>file.path === record.target)?.version) fail('Redis main changed');
+    const checkedRestore = await runtime.redisTopology(record.target, '/etc/redis', new Map([
+        [
+            record.target,
+            record.text
+        ]
+    ]));
+    if (!checkedRestore.complete || checkedRestore.version !== restored.version) fail('Restored Redis include graph changed');
+    const before = runtime.parseLiveConfig('redis', text), after = runtime.parseLiveConfig('redis', record.text);
+    const latest = await runtime.redisTopology();
+    if (!latest.complete || latest.version !== graph.version) fail('Redis include graph changed');
+    return {
+        id: record.id,
+        target: record.target,
+        version: hash(current),
+        graphVersion: graph.version,
+        restoreGraphVersion: restored.version,
+        backupVersion: record.version,
+        createdAt: record.createdAt,
+        changed: hash(current) !== record.version,
+        fields: [
+            ...new Set([
+                ...Object.keys(before.values),
+                ...Object.keys(after.values)
+            ])
+        ].map((key)=>({
+                key,
+                before: before.values[key] ?? null,
+                after: after.values[key] ?? null
+            })),
+        warnings: [
+            ...before.warnings,
+            ...after.warnings
+        ],
+        notice: '지원 항목만 비교합니다. 전체 파일 복원에는 인증과 include 설정도 포함됩니다. 복원 전에 현재 전체 설정을 백업하고 Redis 서비스를 재시작합니다.'
+    };
+}
+// Runs while main() holds the shared kernel lease. Read-only inspection stays
+// available, but one recovery record cannot be superseded by another mutation.
+function nginxMutationStateGuard(action, input) {
+    const configRecovery = action === 'nginx-recover', siteRecovery = action === 'nginx-site-recover';
+    const mutation = [
+        'nginx-apply',
+        'nginx-toggle',
+        'nginx-restore',
+        'nginx-config-apply',
+        'nginx-config-restore',
+        'nginx-site-apply'
+    ].includes(action) || configRecovery || siteRecovery || action === 'certificate' || action === 'service' && (input?.unit === 'nginx.service' || input?.unit === 'certbot.timer' && typeof input?.action === 'string' && [
+        'start',
+        'restart',
+        'enable'
+    ].includes(input.action)) || action === 'install' && Array.isArray(input?.packages) && input.packages.some((name)=>typeof name === 'string' && [
+            'nginx',
+            'certbot',
+            'python3-certbot-nginx'
+        ].includes(name));
+    if (!mutation) return;
+    function privateDirectory(directory) {
+        try {
+            rootDir(directory);
+            if (fs.lstatSync(directory).mode & 0o077) fail('Nginx recovery record directory must be private', 409);
+            return true;
+        } catch (error) {
+            if (helperServiceErrorCode(error, 'ENOENT')) return false;
+            throw error;
+        }
+    }
+    if (!siteRecovery) {
+        const directory = BASE + '/nginx-sites';
+        if (privateDirectory(directory)) {
+            try {
+                fs.lstatSync(directory + '/pending.json');
+                fail('중단된 nginx 사이트 연결을 먼저 복구하세요.', 409);
+            } catch (error) {
+                if (!helperServiceErrorCode(error, 'ENOENT')) throw error;
+            }
+        }
+    }
+    if (!configRecovery) {
+        const directory = BASE + '/nginx-config/transactions';
+        // A symlink at either private parent is never treated as an empty inventory.
+        const parent = BASE + '/nginx-config';
+        if (privateDirectory(parent) && privateDirectory(directory)) {
+            const names = fs.readdirSync(directory);
+            if (names.length > 1000) fail('Nginx recovery record inventory requires review', 409);
+            if (names.some((name)=>name.endsWith('.json'))) fail('중단된 nginx 설정 변경을 먼저 복구하세요.', 409);
+        }
+    }
+}
+// END TYPESCRIPT HELPER SERVICE OPERATIONS
+// BEGIN TYPESCRIPT HELPER DISPATCH
+// Standalone privilege dispatch, using the actual TypeScript executor contracts.
+function helperDispatchObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function helperDispatchErrorCode(error, code) {
+    return helperDispatchObject(error) && error.code === code;
+}
+function helperDispatchErrorText(error) {
+    if (helperDispatchObject(error)) {
+        if ((typeof error.stderr === 'string' || Buffer.isBuffer(error.stderr)) && error.stderr) return error.stderr.toString();
+        if (typeof error.message === 'string') return error.message;
+    }
+    return 'Native command failed';
+}
+function apply(file, text, previous) {
+    if (previous !== null) backup(file, previous);
+    writeConfig(file, text);
+    try {
+        return run('/usr/sbin/nginx', [
+            '-t'
+        ]) + run('/usr/sbin/nginx', [
+            '-s',
+            'reload'
+        ]);
+    } catch (e) {
+        if (previous === null) fs.unlinkSync(file);
+        else writeConfig(file, previous);
+        fail('Apply failed, previous file restored: ' + helperDispatchErrorText(e));
+    }
+}
+function dispatch(action, value) {
+    if (!helperDispatchObject(value)) fail('Invalid action payload');
+    const input = value;
+    nginxMutationStateGuard(action, input);
+    if (action === 'nginx-recovery-plan') return (async ()=>{
+        return (await mariaRuntime()).nginxRecoveryPlan(input);
+    })();
+    if (action === 'nginx-recover') return (async ()=>{
+        return (await mariaRuntime()).recoverNginxConfiguration(input);
+    })();
+    if (action === 'redis-recovery-plan') return (async ()=>{
+        const runtime = await mariaRuntime();
+        return runtime.redisRecoveryPlan(runtime.redisConfigHooks({}, run));
+    })();
+    if (action === 'redis-recover') return (async ()=>{
+        const runtime = await mariaRuntime(), plan = await runtime.redisRecoveryPlan(runtime.redisConfigHooks({}, run));
+        return runtime.recoverRedisConfiguration(input, runtime.redisConfigHooks({}, run, {
+            restoreVersion: plan.backupVersion ?? null
+        }));
+    })();
+    if ([
+        'postgresql-restore-history',
+        'postgresql-history-backup'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime();
+        const prepared = action === 'postgresql-history-backup' ? runtime.preparePostgresqlHistory(input, true) : runtime.preparePostgresqlHistory(input, false);
+        const options = {
+            ownerUid: pgOwner(),
+            backupRoot: BASE + '/postgresql'
+        };
+        return action === 'postgresql-restore-history' ? runtime.postgresqlCompletedHistory(prepared, options) : runtime.importPostgresqlCompletedBackup(prepared, options);
+    })();
+    if ([
+        'postgresql-code-restore-plan',
+        'postgresql-code-restore'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime();
+        const prepared = runtime.preparePostgresqlCodeRestore(input, action === 'postgresql-code-restore');
+        const options = {
+            ownerUid: pgOwner(),
+            backupRoot: BASE + '/postgresql'
+        };
+        return action === 'postgresql-code-restore-plan' ? runtime.postgresqlCodeRestorePlan(prepared, options) : runtime.restorePostgresqlCode(prepared, options);
+    })();
+    if ([
+        'postgresql-code-recovery-plan',
+        'postgresql-code-recover'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime();
+        const prepared = runtime.preparePostgresqlCodeRecovery(input, action === 'postgresql-code-recover');
+        const options = {
+            ownerUid: pgOwner(),
+            backupRoot: BASE + '/postgresql'
+        };
+        return action === 'postgresql-code-recovery-plan' ? runtime.postgresqlCodeRecoveryPlan(prepared, options) : runtime.recoverPostgresqlCode(prepared, options);
+    })();
+    if ([
+        'postgresql-code-plan',
+        'postgresql-code-apply'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime();
+        const prepared = runtime.preparePostgresqlCode(input, action === 'postgresql-code-apply');
+        const options = {
+            ownerUid: pgOwner(),
+            backupRoot: BASE + '/postgresql'
+        };
+        return action === 'postgresql-code-plan' ? runtime.postgresqlCodeOperationPlan(prepared, options) : runtime.applyPostgresqlCodeOperation(prepared, options);
+    })();
+    if ([
+        'postgresql-code-plan',
+        'postgresql-code-apply',
+        'mariadb-code-plan',
+        'mariadb-code-apply'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime();
+        const prepared = runtime.prepareMariaDBCode(input, action === 'mariadb-code-apply');
+        await mariaInspect(prepared.root, runtime);
+        await mariaInspect(prepared.root, runtime, new Map([
+            [
+                prepared.path,
+                prepared.text
+            ]
+        ]));
+        return action === 'mariadb-code-plan' ? runtime.mariadbCodeOperationPlan(prepared) : runtime.applyMariaDBCodeOperation(prepared, {
+            backupRoot: mariaBackupRoot(),
+            inspectService: async ()=>mariaServiceSnapshot(),
+            run: async (binary, args)=>{
+                try {
+                    return execFileSync(binary, args, {
+                        encoding: 'utf8',
+                        timeout: 60000,
+                        maxBuffer: 2097152,
+                        env: {
+                            PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+                            LANG: 'C.UTF-8',
+                            NODE_ENV: 'production'
+                        }
+                    });
+                } catch  {
+                    fail('MariaDB command failed');
+                }
+            }
+        });
+    })();
+    if (action === 'redis-code-plan') return (async ()=>{
+        return (await mariaRuntime()).redisCodeOperationPlan(input);
+    })();
+    if (action === 'redis-code-apply') return (async ()=>{
+        return (await mariaRuntime()).applyRedisCodeOperation(input, {
+            backupRoot: redisBackupRoot(),
+            run
+        });
+    })();
+    if (action === 'redis-config-apply') return (async ()=>{
+        const runtime = await mariaRuntime();
+        return runtime.applyReviewedRedis(input, {
+            backupRoot: redisBackupRoot(),
+            ...runtime.redisConfigHooks(input.changes, run)
+        });
+    })();
+    if (action === 'redis-config-restore') return (async ()=>{
+        const runtime = await mariaRuntime(), record1 = await runtime.readRedisRestoreRecord(input.id);
+        return runtime.restoreRedisConfig(input, runtime.redisConfigHooks({}, run, {
+            restoreVersion: record1.version
+        }));
+    })();
+    if (action === 'redis-config-validate') return (async ()=>{
+        return (await mariaRuntime()).validateReviewedRedis(input);
+    })();
+    if (action === 'redis-config-source') return (async ()=>(await mariaRuntime()).readRedisConfigSource(input))();
+    if (action === 'redis-context-inspect') return (async ()=>{
+        if (Object.keys(input).length) fail('Redis inspection accepts no path or command input');
+        return (await mariaRuntime()).inspectRedisContext();
+    })();
+    if (action === 'nginx-config-restore-plan') return (async ()=>{
+        return (await mariaRuntime()).nginxConfigRestorePlan(input);
+    })();
+    if (action === 'nginx-config-backup') return (async ()=>{
+        return (await mariaRuntime()).createNginxConfigBackup(input);
+    })();
+    if (action === 'nginx-config-backups') return (async ()=>{
+        const runtime = await mariaRuntime();
+        return runtime.nginxConfigBackups(runtime.prepareNginxBackupLookup(input));
+    })();
+    if (action === 'nginx-config-restore') return (async ()=>{
+        if (input.confirm !== true) fail('Nginx restore confirmation required');
+        return (await mariaRuntime()).restoreNginxConfiguration(input);
+    })();
+    if (action === 'nginx-config-apply') return (async ()=>{
+        if (input.confirm !== true) fail('Nginx apply confirmation required');
+        const runtime = await mariaRuntime(), backupRoot = BASE + '/nginx-config';
+        try {
+            fs.mkdirSync(backupRoot, {
+                mode: 0o700
+            });
+        } catch (error) {
+            if (!helperDispatchErrorCode(error, 'EEXIST')) throw error;
+        }
+        rootDir(backupRoot);
+        if (fs.lstatSync(backupRoot).mode & 0o077) fail('Nginx backups must be private');
+        return runtime.applyReviewedNginx(input, {
+            backupRoot
+        });
+    })();
+    if (action === 'postgresql-hba-recovery-status') return (async ()=>{
+        return (await mariaRuntime()).postgresqlHbaRecoveryStatus(input);
+    })();
+    if (action === 'postgresql-hba-recover') return (async ()=>{
+        return (await mariaRuntime()).recoverPostgresqlHbaOperation(input);
+    })();
+    if (action === 'postgresql-hba-operation-plan') return (async ()=>{
+        return (await mariaRuntime()).postgresqlHbaOperationPlan(input);
+    })();
+    if (action === 'postgresql-hba-operation') return (async ()=>{
+        return (await mariaRuntime()).applyPostgresqlHbaOperation(input);
+    })();
+    if (action === 'postgresql-hba-validate') return (async ()=>{
+        return (await mariaRuntime()).validatePostgresqlHba(input);
+    })();
+    if (action === 'postgresql-hba-backup') return (async ()=>{
+        return (await mariaRuntime()).createPostgresqlHbaBackup(input);
+    })();
+    if (action === 'postgresql-hba-backups') return (async ()=>{
+        return (await mariaRuntime()).postgresqlHbaBackups(input);
+    })();
+    if (action === 'postgresql-hba-restore-draft') return (async ()=>{
+        return (await mariaRuntime()).postgresqlHbaRestoreDraft(input);
+    })();
+    if (action === 'postgresql-hba-source') return (async ()=>{
+        return (await mariaRuntime()).readPostgresqlHba(input);
+    })();
+    if (action === 'nginx-site-plan') return (async ()=>(await mariaRuntime()).nginxSitePlan(input))();
+    if (action === 'nginx-site-apply') return (async ()=>(await mariaRuntime()).applyNginxSite(input))();
+    if (action === 'nginx-site-recovery') return (async ()=>{
+        if (Object.keys(input).length) fail('Site recovery lookup accepts no input');
+        return (await mariaRuntime()).nginxSiteRecoveryPlan();
+    })();
+    if (action === 'nginx-site-recover') return (async ()=>(await mariaRuntime()).recoverNginxSite(input))();
+    if (action === 'nginx-context-inspect') return (async ()=>{
+        if (Object.keys(input).length) fail('Nginx inspection accepts no path or command input');
+        return (await mariaRuntime()).inspectNginxContext();
+    })();
+    if (action === 'sudo-policy-inspect') return (async ()=>{
+        const runtime = await mariaRuntime(), account = {
+            uid: runtime.nodeServiceCaller(process.env.SUDO_UID),
+            username: process.env.SUDO_USER
+        };
+        return runtime.inspectSudoPolicy({
+            account,
+            verifyAccount: runtime.sudoPolicyHooks(account).verifyAccount
+        });
+    })();
+    if (action === 'sudo-policy-update') return (async ()=>{
+        if (input.confirm !== true) fail('Sudo rule update confirmation required');
+        const runtime = await mariaRuntime(), account = {
+            uid: runtime.nodeServiceCaller(process.env.SUDO_UID),
+            username: process.env.SUDO_USER
+        }, hooks = runtime.sudoPolicyHooks(account);
+        await hooks.verifyAccount();
+        const backupRoot = BASE + '/sudo-policy';
+        try {
+            fs.mkdirSync(backupRoot, {
+                mode: 0o700
+            });
+        } catch (error) {
+            if (!helperDispatchErrorCode(error, 'EEXIST')) throw error;
+        }
+        rootDir(backupRoot);
+        if (fs.lstatSync(backupRoot).mode & 0o077) fail('Sudo backups must be private');
+        return runtime.updateSudoPolicy(input, {
+            account,
+            backupRoot,
+            ...hooks
+        });
+    })();
+    if ([
+        'node-service-recovery-plan',
+        'node-service-recover'
+    ].includes(action)) return (async ()=>{
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        const hooks = {
+            callerUid: uid,
+            backupRoot: BASE + '/node-services',
+            ...runtime.nodeAppServiceControlHooks(input, uid),
+            ...runtime.nodeAppServiceHooks(input, uid)
+        };
+        return action === 'node-service-recover' ? runtime.recoverNodeAppService(input, hooks) : runtime.nodeServiceRecoveryPlan(input, hooks);
+    })();
+    if (action === 'node-service-restore') return (async ()=>{
+        if (input.confirm !== true) fail('Service restore confirmation required');
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        const backupRoot = BASE + '/node-services', record1 = await runtime.nodeServiceBackupRecord(input.backupId, input, {
+            callerUid: uid,
+            root: backupRoot
+        }), prepared = {
+            ...input,
+            options: record1.serviceOptions
+        };
+        return runtime.restoreNodeAppService(prepared, {
+            callerUid: uid,
+            backupRoot,
+            ...runtime.nodeAppServiceHooks(prepared, uid)
+        });
+    })();
+    if (action === 'node-service-restore-plan') return (async ()=>{
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        return runtime.nodeServiceRestorePlan(input, {
+            callerUid: uid,
+            backupRoot: BASE + '/node-services',
+            readUnit: runtime.nodeAppServiceControlHooks(input, uid).readUnit
+        });
+    })();
+    if (action === 'node-service-backups') return (async ()=>{
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        return runtime.nodeServiceBackups(input, {
+            callerUid: uid,
+            root: BASE + '/node-services'
+        });
+    })();
+    if (action === 'node-service-update') return (async ()=>{
+        if (input.confirm !== true) fail('Service update confirmation required');
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        const backupRoot = BASE + '/node-services';
+        try {
+            fs.mkdirSync(backupRoot, {
+                mode: 0o700
+            });
+        } catch (error) {
+            if (!helperDispatchErrorCode(error, 'EEXIST')) throw error;
+        }
+        rootDir(backupRoot);
+        if (fs.lstatSync(backupRoot).mode & 0o077) fail('Service backups must be private');
+        return runtime.updateNodeAppService(input, {
+            callerUid: uid,
+            backupRoot,
+            ...runtime.nodeAppServiceHooks(input, uid)
+        });
+    })();
+    if (action === 'node-service-inspect') return (async ()=>{
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        return runtime.inspectNodeAppService(input, {
+            callerUid: uid,
+            readUnit: runtime.nodeAppServiceControlHooks(input, uid).readUnit
+        });
+    })();
+    if (action === 'node-service-control') return (async ()=>{
+        if (input.confirm !== true || typeof input.operation !== 'string' || ![
+            'start',
+            'stop',
+            'restart',
+            'enable',
+            'disable'
+        ].includes(input.operation)) fail('Invalid Node service control');
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        return runtime.controlNodeAppService(input, {
+            callerUid: uid,
+            ...runtime.nodeAppServiceControlHooks(input, uid)
+        });
+    })();
+    if (action === 'node-service-install') return (async ()=>{
+        if (input.confirm !== true) fail('Service installation confirmation required');
+        const runtime = await mariaRuntime(), uid = runtime.nodeServiceCaller(process.env.SUDO_UID);
+        if (input.uid !== uid) fail('Service account must match caller');
+        return runtime.installNodeAppService(input, runtime.nodeAppServiceHooks(input, uid));
+    })();
+    if (action === 'redis-restore-plan') return redisRestorePlan(input);
+    if (action === 'mariadb-recovery-plan') return (async ()=>{
+        return (await mariaRuntime()).mariaDBRecoveryPlan(input, {
+            inspectService: async ()=>mariaServiceSnapshot()
+        });
+    })();
+    if (action === 'mariadb-recover') return (async ()=>{
+        return (await mariaRuntime()).recoverMariaDBConfiguration(input, {
+            inspectService: async ()=>mariaServiceSnapshot(),
+            run: async (binary, args)=>{
+                try {
+                    return execFileSync(binary, args, {
+                        encoding: 'utf8',
+                        timeout: 60000,
+                        maxBuffer: 2097152,
+                        env: {
+                            PATH: '/usr/sbin:/usr/bin:/sbin:/bin',
+                            LANG: 'C.UTF-8',
+                            NODE_ENV: 'production'
+                        }
+                    });
+                } catch  {
+                    fail('MariaDB command failed');
+                }
+            }
+        });
+    })();
+    if (action === 'mariadb-service-scope') return (async ()=>{
+        const runtime = await mariaRuntime(), snapshot = mariaServiceSnapshot();
+        return runtime.mariadbServiceScope(input.root, snapshot.argv, snapshot.canonical);
+    })();
+    if (action === 'mariadb-restore') return mariaRestore(input);
+    if (action === 'mariadb-restore-plan') return mariaRestorePlan(input);
+    if (action === 'redis-backups') return (async ()=>{
+        for (const dir of [
+            '/var',
+            '/var/lib',
+            '/var/lib/linux',
+            '/var/lib/linux/admin'
+        ])rootDir(dir);
+        const runtime = await mariaRuntime();
+        return runtime.redisBackups();
+    })();
+    if (action === 'mariadb-backups') return mariaBackups();
+    if (action === 'mariadb-apply') return mariaApply(input);
+    if (action === 'postgresql-restore-plan') return pgRestorePlan(input);
+    if (action === 'postgresql-restore') return pgRestore(input);
+    if ([
+        'redis-config-backup',
+        'mariadb-config-backup'
+    ].includes(action)) return (async ()=>{
+        return (await mariaRuntime()).createDatabaseConfigBackup(action.startsWith('redis') ? 'redis' : 'mariadb', input);
+    })();
+    if (action.startsWith('postgresql-data-')) return (async ()=>{
+        for (const directory of [
+            '/var',
+            '/var/lib',
+            '/var/lib/linux',
+            BASE
+        ])rootDir(directory);
+        return (await mariaRuntime()).postgresqlDataOperation(action.slice('postgresql-data-'.length), input);
+    })();
+    if (action === 'postgresql-config-backup') return (async ()=>{
+        return (await mariaRuntime()).createPostgresqlConfigBackup(input, {
+            ownerUid: pgOwner(),
+            backupRoot: BASE + '/postgresql'
+        });
+    })();
+    if (action === 'postgresql-backups') return pgBackups(input);
+    if (action === 'postgresql-apply') return pgApply(input);
+    if (action === 'nginx-backups') return {
+        backups: fs.readdirSync(BASE).filter((f)=>f.endsWith('.json')).map((f)=>{
+            const { text, ...data } = record(f.slice(0, -5));
+            return {
+                ...data,
+                bytes: Buffer.byteLength(text)
+            };
+        })
+    };
+    if (action === 'nginx-backup') {
+        const file = target(input.domain), text = current(file);
+        if (text === null) fail('No managed config');
+        const { text: _, ...data } = backup(file, text);
+        return {
+            backup: data
+        };
+    }
+    if (action === 'nginx-restore-plan') {
+        const data = record(input.id), text = current(data.target);
+        if (text === null) fail('Current config missing');
+        return {
+            record: data,
+            current: text,
+            version: hash(text)
+        };
+    }
+    if (action === 'nginx-apply') {
+        if (input.confirm !== true) fail('Confirmation required');
+        const file = target(input.domain);
+        if (current(file + '.disabled') !== null) fail('Enable the existing disabled site before applying changes');
+        const previous = current(file), text = updateConfig(input, previous);
+        return {
+            applied: true,
+            target: file,
+            logs: apply(file, text, previous)
+        };
+    }
+    if (action === 'nginx-toggle') {
+        if (input.confirm !== true || typeof input.enabled !== 'boolean') fail('Toggle confirmation required');
+        if (typeof input.version !== 'string' || !/^[a-f0-9]{64}$/.test(input.version)) fail('Toggle configuration version required');
+        const active = target(input.domain), disabled = active + '.disabled';
+        const activeText = current(active), disabledText = current(disabled);
+        if (activeText !== null && disabledText !== null) fail('Both active and disabled files exist');
+        const before = input.enabled ? disabledText : activeText;
+        if (before === null) fail('Source configuration missing or already in requested state');
+        if (input.version !== hash(before)) fail('Current config changed; reload the live site before toggling', 409);
+        backup(active, before);
+        const from = input.enabled ? disabled : active, to = input.enabled ? active : disabled;
+        fs.renameSync(from, to);
+        try {
+            const logs = run('/usr/sbin/nginx', [
+                '-t'
+            ]) + run('/usr/sbin/nginx', [
+                '-s',
+                'reload'
+            ]);
+            return {
+                changed: true,
+                enabled: input.enabled,
+                logs
+            };
+        } catch (e) {
+            fs.renameSync(to, from);
+            fail('Toggle failed, previous filename restored: ' + helperDispatchErrorText(e));
+        }
+    }
+    if (action === 'nginx-restore') {
+        if (input.confirm !== true) fail('Confirmation required');
+        const data = record(input.id), before = current(data.target);
+        if (before === null || input.version !== hash(before)) fail('Current config changed');
+        return {
+            restored: true,
+            logs: apply(data.target, data.text, before)
+        };
+    }
+    if (action === 'nginx-check') {
+        if (Object.keys(input).length) fail('Invalid nginx check');
+        return {
+            valid: true,
+            logs: run('/usr/sbin/nginx', [
+                '-t'
+            ])
+        };
+    }
+    if (action === 'service' && input.unit === 'tastedev-linux.service') {
+        if (input.action !== 'restart' || input.confirm !== true || Object.keys(input).some((key)=>![
+                'unit',
+                'action',
+                'confirm'
+            ].includes(key))) fail('Invalid app restart');
+        // A fixed systemd timer survives this HTTP process and lets its response finish.
+        const logs = run('/usr/bin/systemd-run', [
+            '--quiet',
+            '--collect',
+            '--unit=tastedev-linux-app-restart',
+            '--on-active=3s',
+            '--timer-property=AccuracySec=1s',
+            '/usr/bin/systemctl',
+            '--no-ask-password',
+            'restart',
+            'tastedev-linux.service'
+        ], 10000);
+        return {
+            scheduled: true,
+            delaySeconds: 3,
+            logs
+        };
+    }
+    if (action === 'service') {
+        if (input.path !== undefined) return pgService(input);
+        if (typeof input.unit !== 'string' || !units.includes(input.unit) || typeof input.action !== 'string' || ![
+            'start',
+            'stop',
+            'restart',
+            'reload',
+            'enable',
+            'disable'
+        ].includes(input.action) || input.action === 'reload' && input.unit !== 'nginx.service' || input.confirm !== true) fail('Invalid service operation');
+        const loaded = run('/usr/bin/systemctl', [
+            'show',
+            input.unit,
+            '--property=LoadState',
+            '--value',
+            '--no-pager',
+            '--no-ask-password'
+        ], 5000).trim();
+        if (loaded !== 'loaded') fail('선택한 서비스가 로드되지 않았습니다. 설치 상태를 확인한 뒤 다시 조회하세요.', 409);
+        let logs = '';
+        if (input.unit === 'nginx.service' && [
+            'start',
+            'restart',
+            'reload'
+        ].includes(input.action)) logs += run('/usr/sbin/nginx', [
+            '-t'
+        ]);
+        logs += run('/usr/bin/systemctl', [
+            '--no-ask-password',
+            input.action,
+            input.unit
+        ]);
+        return {
+            changed: true,
+            logs
+        };
+    }
+    if (action === 'certificate') {
+        if (input.confirm !== true || input.agree !== true) fail('Certificate confirmation required');
+        return (async ()=>{
+            const runtime = await mariaRuntime();
+            return runtime.certificateExecution(input, {
+                backupNginx: (name, onBackup)=>runtime.backupCertificateNginx(name, {
+                        onBackup
+                    }),
+                reportBackup: (record1)=>process.stdout.write(JSON.stringify({
+                        logs: 'nginx 설정 백업 · ' + record1.path + ' · ' + record1.id + '\n'
+                    }) + '\n'),
+                inspectDirectory: (name)=>fs.lstatSync(name),
+                run: async (binary, args)=>run(binary, args)
+            });
+        })();
+    }
+    if (action === 'install') {
+        if (input.confirm !== true || !Array.isArray(input.packages) || !input.packages.length || input.packages.length > 6 || new Set(input.packages).size !== input.packages.length) fail('Invalid packages');
+        const packages = input.packages;
+        const allowed = {
+            nginx: [
+                'nginx'
+            ],
+            certbot: [
+                'certbot',
+                'python3-certbot-nginx'
+            ],
+            nodejs: [
+                'nodejs',
+                'npm'
+            ],
+            postgresql: [
+                'postgresql'
+            ],
+            mariadb: [
+                'mariadb-server'
+            ],
+            redis: [
+                'redis-server'
+            ]
+        };
+        if (!packages.every((n)=>typeof n === 'string' && Object.hasOwn(allowed, n))) fail('Invalid packages');
+        return {
+            logs: run('/usr/bin/apt-get', [
+                'install',
+                '--yes',
+                '--no-remove',
+                '--no-upgrade',
+                ...packages.flatMap((n)=>allowed[n])
+            ])
+        };
+    }
+    fail('Unsupported action');
+}
+// END TYPESCRIPT HELPER DISPATCH
+// BEGIN TYPESCRIPT HELPER LOCK MAIN
+// Standalone kernel lock, supervisor and entrypoint for the privileged helper.
+const { StringDecoder: helperInputStringDecoder } = require('node:string_decoder');
+function helperLockErrorCode(error, code) {
+    return error !== null && typeof error === 'object' && 'code' in error && error.code === code;
+}
+const ADMIN_LOCK_MARKER = 'tastedev-linux kernel operation lock v1\n';
+function adminLockIdentity(left, right) {
+    return left.dev === right.dev && left.ino === right.ino;
+}
+function adminLockFile(stat) {
+    return stat.isFile() && !stat.isSymbolicLink() && stat.uid === 0 && (stat.mode & 0o777) === 0o600 && stat.size === Buffer.byteLength(ADMIN_LOCK_MARKER) && [
+        1,
+        2
+    ].includes(stat.nlink);
+}
+function acquireAdminLock() {
+    rootDir(BASE);
+    rootDir('/usr');
+    rootDir('/usr/bin');
+    const executable = fs.lstatSync('/usr/bin/flock');
+    if (!executable.isFile() || executable.isSymbolicLink() || executable.uid !== 0 || executable.nlink !== 1 || executable.mode & 0o022 || !(executable.mode & 0o111)) fail('Kernel operation lock executable must be root-owned');
+    const lock = path.join(BASE, 'operation.lock'), temporary = path.join(BASE, '.operation-lock-init-' + randomUUID());
+    let init;
+    try {
+        init = fs.openSync(temporary, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+        fs.writeFileSync(init, ADMIN_LOCK_MARKER);
+        fs.fsyncSync(init);
+        fs.closeSync(init);
+        init = undefined;
+        try {
+            fs.linkSync(temporary, lock);
+        } catch (error) {
+            if (!helperLockErrorCode(error, 'EEXIST')) throw error;
+        }
+    } finally{
+        if (init !== undefined) fs.closeSync(init);
+        try {
+            fs.unlinkSync(temporary);
+        } catch (error) {
+            if (!helperLockErrorCode(error, 'ENOENT')) throw error;
+        }
+    }
+    let fd;
+    try {
+        const before = fs.lstatSync(lock);
+        if (!adminLockFile(before)) fail('Legacy or unsafe admin operation lock requires review; it was preserved');
+        fd = fs.openSync(lock, fs.constants.O_RDWR | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+        let stat = fs.fstatSync(fd);
+        if (!adminLockFile(stat) || !adminLockIdentity(before, stat) || fs.readFileSync(fd, 'utf8') !== ADMIN_LOCK_MARKER) fail('Unsafe admin operation lock');
+        // A crash between atomic link and temporary unlink may leave exactly one
+        // private initialization alias. Remove only that verified same-inode alias.
+        if (stat.nlink === 2) {
+            const names = fs.readdirSync(BASE);
+            if (names.length > 1000) fail('Admin operation lock directory is too large');
+            let aliases = 0;
+            for (const name of names){
+                if (!/^\.operation-lock-init-[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(name)) continue;
+                const file = path.join(BASE, name);
+                let alias;
+                try {
+                    alias = fs.lstatSync(file);
+                } catch (error) {
+                    if (helperLockErrorCode(error, 'ENOENT')) continue;
+                    throw error;
+                }
+                if (!adminLockIdentity(alias, stat)) continue;
+                if (!adminLockFile(alias)) fail('Unsafe operation lock initialization alias');
+                try {
+                    fs.unlinkSync(file);
+                } catch (error) {
+                    if (!helperLockErrorCode(error, 'ENOENT')) throw error;
+                }
+                aliases++;
+            }
+            stat = fs.fstatSync(fd);
+            if (stat.nlink !== 1 || aliases > 1) fail('Unexpected admin operation lock links');
+        }
+        try {
+            execFileSync('/usr/bin/flock', [
+                '--exclusive',
+                '--nonblock',
+                '--conflict-exit-code',
+                '75',
+                '3'
+            ], {
+                timeout: 5000,
+                maxBuffer: 4096,
+                env: {
+                    PATH: '/usr/bin:/usr/sbin:/bin',
+                    LANG: 'C',
+                    LC_ALL: 'C',
+                    NODE_ENV: 'production'
+                },
+                stdio: [
+                    'ignore',
+                    'pipe',
+                    'pipe',
+                    fd
+                ]
+            });
+        } catch (error) {
+            if (error !== null && typeof error === 'object' && 'status' in error && error.status === 75) fail('Another admin operation is active');
+            fail('Kernel operation lock could not be acquired');
+        }
+        const after = fs.lstatSync(lock), held = fs.fstatSync(fd), currentExecutable = fs.lstatSync('/usr/bin/flock');
+        if (!adminLockFile(after) || after.nlink !== 1 || !adminLockIdentity(after, held) || !adminLockIdentity(executable, currentExecutable) || executable.uid !== currentExecutable.uid || executable.mode !== currentExecutable.mode || executable.size !== currentExecutable.size || executable.mtimeMs !== currentExecutable.mtimeMs || executable.ctimeMs !== currentExecutable.ctimeMs) fail('Admin operation lock changed while acquiring');
+        return fd;
+    } catch (error) {
+        if (fd !== undefined) fs.closeSync(fd);
+        throw error;
+    }
+}
+async function runNativeLockSupervisor() {
+    if (process.getuid?.() !== 0 || process.argv.length < 5) fail('Invalid native lock supervisor');
+    const timeout = Number(process.argv[3]), binary = process.argv[4];
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 750000 || !binary.startsWith('/')) fail('Invalid supervised native command');
+    const fd = fs.fstatSync(3), lock = fs.lstatSync(path.join(BASE, 'operation.lock')), marker = Buffer.alloc(Buffer.byteLength(ADMIN_LOCK_MARKER));
+    if (!adminLockFile(fd) || fd.nlink !== 1 || !adminLockFile(lock) || !adminLockIdentity(fd, lock) || fs.readSync(3, marker, 0, marker.length, 0) !== marker.length || marker.toString() !== ADMIN_LOCK_MARKER) fail('Native supervisor requires the private admin lock descriptor');
+    // Native programs receive only standard streams, never the root lock FD.
+    // This trusted supervisor keeps FD 3 until the native child actually exits.
+    const child = childProcess.spawn(binary, process.argv.slice(5), {
+        stdio: 'inherit',
+        detached: true,
+        shell: false
+    });
+    let force;
+    const signal = ()=>{
+        const pid = child.pid;
+        if (typeof pid !== 'number' || !Number.isInteger(pid)) return;
+        try {
+            process.kill(-pid, 'SIGTERM');
+        } catch (error) {
+            if (!helperLockErrorCode(error, 'ESRCH')) throw error;
+        }
+        force ??= setTimeout(()=>{
+            try {
+                process.kill(-pid, 'SIGKILL');
+            } catch (error) {
+                if (!helperLockErrorCode(error, 'ESRCH')) throw error;
+            }
+        }, 3000);
+    };
+    process.on('SIGTERM', signal);
+    process.on('SIGINT', signal);
+    const deadline = setTimeout(signal, timeout);
+    const result = await new Promise((resolve)=>{
+        child.once('error', ()=>resolve({
+                code: 127
+            }));
+        child.once('close', (code, signal)=>resolve({
+                code,
+                signal
+            }));
+    });
+    clearTimeout(force);
+    clearTimeout(deadline);
+    process.removeListener('SIGTERM', signal);
+    process.removeListener('SIGINT', signal);
+    process.exitCode = result.code ?? 1;
+}
+async function main() {
+    if (process.getuid?.() !== 0) fail('Root required', 403);
+    if (process.argv[2] === '--native-lock-supervisor') return runNativeLockSupervisor();
+    if (process.argv.length !== 3) fail('One action required');
+    let text = '', receivedBytes = 0;
+    const decoder = new helperInputStringDecoder('utf8');
+    for await (const chunk of process.stdin){
+        if (typeof chunk !== 'string' && !Buffer.isBuffer(chunk)) fail('Invalid input stream');
+        receivedBytes += typeof chunk === 'string' ? Buffer.byteLength(chunk) : chunk.length;
+        text += typeof chunk === 'string' ? chunk : decoder.write(chunk);
+        if (receivedBytes > ([
+            'postgresql-code-plan',
+            'postgresql-code-apply',
+            'mariadb-code-plan',
+            'mariadb-code-apply',
+            'redis-code-plan',
+            'redis-code-apply',
+            'postgresql-hba-operation-plan',
+            'postgresql-hba-operation',
+            'postgresql-hba-validate'
+        ].includes(process.argv[2]) ? 1600000 : process.argv[2] === 'nginx-config-apply' ? 300000 : 16384)) fail('Payload too large');
+    }
+    text += decoder.end();
+    const input = JSON.parse(text || '{}');
+    if (input === null || typeof input !== 'object' || Array.isArray(input)) fail('Invalid action payload');
+    fs.mkdirSync('/var/lib/linux', {
+        recursive: true,
+        mode: 0o700
+    });
+    rootDir('/var/lib/linux');
+    fs.mkdirSync(BASE, {
+        mode: 0o700,
+        recursive: true
+    });
+    rootDir(BASE);
+    const fd = acquireAdminLock();
+    adminNativeContext = Object.freeze({
+        fd,
+        helper: __filename
+    });
+    Object.defineProperty(globalThis, Symbol.for('tastedev.admin-native-lock'), {
+        value: adminNativeContext
+    });
+    try {
+        const output = await dispatch(process.argv[2], input);
+        process.stdout.write(JSON.stringify(output));
+    } finally{
+        fs.closeSync(fd);
+    }
+}
+// END TYPESCRIPT HELPER LOCK MAIN
+// BEGIN TYPESCRIPT HELPER ENTRYPOINT
+main().catch((error)=>{
+    process.stderr.write(helperErrorOutput(error, process.argv[2]));
+    process.exitCode = 1;
+});
+// END TYPESCRIPT HELPER ENTRYPOINT

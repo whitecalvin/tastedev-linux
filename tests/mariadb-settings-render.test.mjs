@@ -1,0 +1,37 @@
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';import assert from 'node:assert/strict';import React from 'react';
+import {readFile} from 'node:fs/promises';import {createRequire} from 'node:module';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+test('MariaDB file GUI isolates groups, preserves duplicate rows and edits valueless options',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../components/file-settings.tsx',import.meta.url),'utf8'),{filename:'file-settings.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const Button=()=>null,Switch=()=>null,TextInput=()=>null,Dropdown=()=>null,module={exports:{}},native=createRequire(import.meta.url),rootStates=[],rowStates=[];let states=rootStates,index=0;
+ const hooks={...React,useRef:value=>({current:value}),useId:()=>"fixture-setting-names",useState:value=>{const at=index++;if(!(at in states))states[at]=value;const store=states;return[store[at],next=>store[at]=typeof next==='function'?next(store[at]):next];},useMemo:fn=>fn(),useEffect:()=>{}};
+ const require=name=>name==='./console-types'?consoleTypes:name==='react'?hooks:name==='./language-provider'?{useLanguage:()=>({t:value=>value})}:name==='./ui/controls'?{Button,Switch,TextInput,Dropdown}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ let record={text:'[client]\npassword = "fixture secret"\nport = 3306\n[mysqld]\nport = 3307\nskip-networking\n[client]\nport = 3308\n'},commits=0;
+ const onChange=next=>{record={...record,...next};if(Object.hasOwn(next,'text'))commits++;};
+ const nodes=tree=>!tree||typeof tree!=='object'?[]:[tree,...React.Children.toArray(tree.props?.children).flatMap(nodes)];
+ let requestedGroup;const render=()=>{states=rootStates;index=0;return module.exports.default({format:'mariadb',record,onChange,requestedGroup});};
+ const findRow=(tree,line)=>nodes(tree).find(node=>node.props?.row?.line===line);
+ const renderRow=element=>{states=rowStates;index=0;return element.type(element.props);};
+ let tree=render(),view=renderRow(findRow(tree,2));assert.equal(nodes(view).find(node=>node.type===TextInput).props.type,'password');
+ const catalog=nodes(tree).find(node=>node.type==='datalist');assert(catalog);const suggestions=nodes(catalog).filter(node=>node.type==='option').map(node=>node.props.value);assert.equal(suggestions.length,66);for(const name of ['ssl_ca','require_secure_transport','log_bin','innodb_data_file_buffering'])assert(suggestions.includes(name));assert(!suggestions.includes('innodb_flush_method'));assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.list,catalog.props.id);
+ assert(!nodes(view).some(node=>node.props?.className==='postgresql-setting-description'),'client password must not receive server help');
+ rowStates.length=0;view=renderRow(findRow(tree,5));assert.match(nodes(view).find(node=>node.type===TextInput).props['aria-description'],/TCP.*포트/);
+ nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 검색').props.onChange({target:{value:'서버가 TCP'}});tree=render();assert(findRow(tree,5));assert(!findRow(tree,3),'client port must not match server help');nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 검색').props.onChange({target:{value:''}});tree=render();
+ rowStates.length=0;view=renderRow(findRow(tree,5));nodes(view).find(node=>node.type===TextInput).props.onChange({target:{value:'3310'}});
+ assert.equal(commits,1);assert(record.text.includes('port = 3310\n'));assert(record.text.startsWith('[client]\npassword = "fixture secret"\nport = 3306\n'));assert(record.text.endsWith('[client]\nport = 3308\n'));
+ tree=render();nodes(render()).find(node=>node.type===Dropdown).props.onChange({target:{value:'mysqld'}});tree=render();assert(!findRow(tree,3));assert(findRow(tree,5));
+ rowStates.length=0;view=renderRow(findRow(tree,6));nodes(view).find(node=>node.type===Button).props.onClick();tree=render();assert.equal(findRow(tree,6).props.row.enabled,false);
+ rowStates.length=0;view=renderRow(findRow(tree,6));nodes(view).find(node=>node.type===Switch).props.onChange({target:{checked:true}});tree=render();assert.equal(findRow(tree,6).props.row.enabled,true);assert.equal(findRow(tree,6).props.row.value,'');
+ nodes(render()).find(node=>node.type===TextInput&&node.props.label==='추가할 설정 그룹').props.onChange({target:{value:'mysqld'}});
+ nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.onChange({target:{value:'general-log'}});
+ nodes(render()).find(node=>node.type===Switch&&node.props.label==='값 없는 옵션').props.onChange({target:{checked:true}});tree=render();assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정값').props.disabled,true);
+ nodes(tree).find(node=>node.type===Button&&node.props.children==='초안에 항목 추가').props.onClick();tree=render();assert(record.text.includes('general-log\n[client]'));assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.value,'');assert.equal(nodes(render()).find(node=>node.type===Switch&&node.props.label==='값 없는 옵션').props.checked,false);assert(findRow(tree,3));
+ const before=record.text;nodes(render()).find(node=>node.type===TextInput&&node.props.label==='추가할 설정 그룹').props.onChange({target:{value:'mysqld]\n[client'}});nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.onChange({target:{value:'injected'}});tree=render();nodes(tree).find(node=>node.type===Button&&node.props.children==='초안에 항목 추가').props.onClick();assert.equal(record.text,before);assert(nodes(render()).some(node=>node.props?.role==='alert'&&node.props.children==='설정값을 확인하세요.'));
+ requestedGroup='client';tree=render();assert(findRow(tree,3));assert(!findRow(tree,5));assert(!nodes(tree).some(node=>node.type===Dropdown));assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='추가할 설정 그룹').props.value,'client');
+ assert(!nodes(tree).some(node=>node.type==='datalist'),'server suggestions must not leak into client group');assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.list,undefined);
+ nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정 이름').props.onChange({target:{value:'socket'}});nodes(render()).find(node=>node.type===TextInput&&node.props.label==='설정값').props.onChange({target:{value:'/fixture/socket'}});tree=render();nodes(tree).find(node=>node.type===Button&&node.props.children==='초안에 항목 추가').props.onClick();assert(record.text.endsWith('socket = /fixture/socket\n'));
+ requestedGroup='mysqld';tree=render();assert(findRow(tree,5));assert(!findRow(tree,3));assert.equal(nodes(render()).find(node=>node.type===TextInput&&node.props.label==='추가할 설정 그룹').props.value,'mysqld');
+
+});

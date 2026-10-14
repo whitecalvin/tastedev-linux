@@ -1,0 +1,11 @@
+{
+  "relatedTests": 29,
+  "languageTests": 15,
+  "nativeChecks": 13,
+  "sourceSha256": {
+    "lib/operations.mjs": "3b029722fc0c32b95e0386b07ce68b65c96d0b481974e2426fb33692b8eab472",
+    "components/operations-panel.jsx": "cbc267cee9f42c2c725f2039a609fbbb020c59a10f762e6f6c260d0a360d2620",
+    "tests/operations-restore-selection.test.mjs": "44f2e3aca731aa23a03212233f5941d0e9c12bd9563484c369bbdba4040d8c7a",
+    "scripts/verification/cron-user-isolated.mjs": "66187a4d4e9e1f196249df2984ba8743ef0db3af2f9d287d1a6157d8bd2a9760"
+  }
+}

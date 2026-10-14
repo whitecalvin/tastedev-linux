@@ -1,0 +1,40 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,readFile,readdir,rm,chmod,symlink,link,unlink,lstat} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {postgresqlConfigGraph} from '../lib/postgresql-config-graph.ts';
+import {createPostgresqlGraphArchive,readPostgresqlGraphArchive} from '../lib/postgresql-graph-archive.ts';
+const target='/etc/postgresql/16/main/postgresql.conf',hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+async function fixture(run){const base=await mkdtemp('/mnt/data/build/tastedev-linux/pg-graph-archive-');try{const cluster=base+'/postgresql/16/main',backupRoot=base+'/backups';await mkdir(cluster+'/conf.d',{recursive:true,mode:0o700});await mkdir(backupRoot,{mode:0o700});await writeFile(cluster+'/postgresql.conf',"port=5432\r\ninclude 'shared.conf'\r\ninclude_dir 'conf.d'\r\ninclude_if_exists 'absent.conf'\r\n",{mode:0o600});await writeFile(cluster+'/shared.conf',"password='private-secret 한글 😀' # preserve\n",{mode:0o600});await writeFile(cluster+'/conf.d/Z.conf','max_connections=100\n',{mode:0o600});await writeFile(cluster+'/conf.d/a.conf','work_mem=4096\n',{mode:0o600});await writeFile(cluster+'/conf.d/.hidden.conf','port=9999\n',{mode:0o600});const graph=await postgresqlConfigGraph(target,{base});await run({base,cluster,backupRoot,graph});}finally{await rm(base,{recursive:true,force:true});}}
+test('graph archive schema refuses malformed nested metadata and unsupported resource verification claims',async()=>fixture(async ctx=>{
+ const reference=await createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot),file=ctx.backupRoot+'/graphs/'+reference.id+'.json',original=JSON.parse(await readFile(file,'utf8'));
+ for(const change of [record=>record.graph.operationalResourcesVerified=true,record=>record.sources[0].attributes.uid='0',record=>record.graph.edges[0].line='1',record=>record.graph.directories[0].names=[null],record=>record.sources[0]=null]){
+  const record=structuredClone(original);change(record);const bytes=Buffer.from(JSON.stringify(record));await writeFile(file,bytes,{mode:0o600});
+  await assert.rejects(readPostgresqlGraphArchive({...reference,version:hash(bytes),bytes:bytes.length},ctx.backupRoot,target),{status:409});
+ }
+}));
+test('PostgreSQL graph archive stores all exact sources, directory order and optional absence privately',async()=>fixture(async ctx=>{
+const before=await readFile(ctx.cluster+'/postgresql.conf'),reference=await createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot);assert.deepEqual(Object.keys(reference),['id','version','bytes','graphVersion']);assert(!JSON.stringify(reference).includes('private-secret'));
+const record=await readPostgresqlGraphArchive(reference,ctx.backupRoot,target);assert.deepEqual(record.graph,ctx.graph);assert.deepEqual(record.graph.directories[0].names,['Z.conf','a.conf']);assert.deepEqual(record.graph.missing,['/etc/postgresql/16/main/absent.conf']);assert(!record.sources.some(file=>file.path.endsWith('.hidden.conf')));
+for(const source of record.sources){assert.equal(source.text,await readFile(ctx.base+'/'+source.path.slice(5),'utf8'));const stat=await lstat(ctx.base+'/'+source.path.slice(5));assert.deepEqual(source.attributes,{uid:stat.uid,gid:stat.gid,mode:stat.mode&0o777});}assert.equal((await lstat(ctx.backupRoot+'/graphs')).mode&0o777,0o700);assert.equal((await lstat(ctx.backupRoot+'/graphs/'+reference.id+'.json')).mode&0o777,0o600);assert.deepEqual(await readFile(ctx.cluster+'/postgresql.conf'),before);
+}));
+test('PostgreSQL graph archive refuses unregistered or changed graph before storing private files',async()=>fixture(async ctx=>{
+await assert.rejects(createPostgresqlGraphArchive({...ctx.graph},ctx.backupRoot));await writeFile(ctx.cluster+'/shared.conf','port=6000\n');await assert.rejects(createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot));assert.deepEqual(await readdir(ctx.backupRoot),[]);
+}));
+test('PostgreSQL graph archive survives later operating include changes and retains original exact source',async()=>fixture(async ctx=>{
+const reference=await createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot);await writeFile(ctx.cluster+'/shared.conf','port=6000\n');await unlink(ctx.cluster+'/conf.d/Z.conf');const record=await readPostgresqlGraphArchive(reference,ctx.backupRoot,target);assert(record.sources.find(file=>file.path.endsWith('/shared.conf')).text.includes('private-secret'));assert(record.sources.some(file=>file.path.endsWith('/Z.conf')));assert.equal(await readFile(ctx.cluster+'/shared.conf','utf8'),'port=6000\n');
+}));
+test('PostgreSQL graph archive refuses changed bytes, exposed permissions, links and client path options',async()=>fixture(async ctx=>{
+const reference=await createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot),file=ctx.backupRoot+'/graphs/'+reference.id+'.json',bytes=await readFile(file);
+for(const ref of [{...reference,id:'../../escape'},{...reference,path:file},{...reference,bytes:16000001},{...reference,version:'a'.repeat(64)}])await assert.rejects(readPostgresqlGraphArchive(ref,ctx.backupRoot,target));
+await chmod(file,0o644);await assert.rejects(readPostgresqlGraphArchive(reference,ctx.backupRoot,target));await chmod(file,0o600);await link(file,file+'.link');await assert.rejects(readPostgresqlGraphArchive(reference,ctx.backupRoot,target));await unlink(file+'.link');await writeFile(file,Buffer.concat([bytes,Buffer.from(' ')]));await assert.rejects(readPostgresqlGraphArchive(reference,ctx.backupRoot,target));await unlink(file);await writeFile(file+'.original',bytes,{mode:0o600});await symlink(file+'.original',file);await assert.rejects(readPostgresqlGraphArchive(reference,ctx.backupRoot,target));assert.deepEqual(await readFile(file+'.original'),bytes);
+}));
+test('PostgreSQL graph archive reader validates source hashes and cluster paths even for private-reference fixtures',async()=>fixture(async ctx=>{
+const reference=await createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot),file=ctx.backupRoot+'/graphs/'+reference.id+'.json',original=JSON.parse(await readFile(file,'utf8'));
+for(const edit of [record=>{record.sources[0].text+='external';},record=>{record.sources[0].attributes.mode=0o777;},record=>{record.graph.files[0].path='/etc/passwd';record.sources[0].path='/etc/passwd';},record=>{record.graph.missing.push('/etc/passwd');},record=>{record.target='/etc/postgresql/16/other/postgresql.conf';}]){const record=structuredClone(original);edit(record);const bytes=Buffer.from(JSON.stringify(record));await writeFile(file,bytes);await assert.rejects(readPostgresqlGraphArchive({...reference,version:hash(bytes),bytes:bytes.length},ctx.backupRoot,target));}
+}));
+test('PostgreSQL graph archive refuses a symlink or publicly writable archive directory',async()=>fixture(async ctx=>{
+await mkdir(ctx.backupRoot+'/elsewhere',{mode:0o700});await symlink(ctx.backupRoot+'/elsewhere',ctx.backupRoot+'/graphs');await assert.rejects(createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot));assert.deepEqual(await readdir(ctx.backupRoot+'/elsewhere'),[]);await unlink(ctx.backupRoot+'/graphs');await mkdir(ctx.backupRoot+'/graphs',{mode:0o700});await chmod(ctx.backupRoot+'/graphs',0o777);await assert.rejects(createPostgresqlGraphArchive(ctx.graph,ctx.backupRoot));
+}));
+test('PostgreSQL graph archive preserves near-limit source bundles whose JSON escaping exceeds ordinary backup limits',async()=>fixture(async ctx=>{
+await writeFile(ctx.cluster+'/postgresql.conf',"include_dir 'conf.d'\n");const text='#'+String.fromCharCode(1).repeat(250000)+'\n';for(const name of ['Z.conf','a.conf','b.conf','c.conf'])await writeFile(ctx.cluster+'/conf.d/'+name,text,{mode:0o600});const graph=await postgresqlConfigGraph(target,{base:ctx.base}),reference=await createPostgresqlGraphArchive(graph,ctx.backupRoot);assert(reference.bytes>1600000);const record=await readPostgresqlGraphArchive(reference,ctx.backupRoot,target);assert.equal(record.sources.length,5);for(const source of record.sources.filter(file=>file.path!==target))assert.equal(source.text,text);
+}));

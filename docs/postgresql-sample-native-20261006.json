@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "version": "postgres (PostgreSQL) 18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)",
+  "binary": "/usr/lib/postgresql/18/bin/postgres",
+  "binarySha256": "30a38e0516ec1bde4b8ca710cf28ba51ee78bd004cabbf3107e7a52d5414a64a",
+  "samplePath": "/usr/share/postgresql/18/postgresql.conf.sample",
+  "sampleSha256": "93e3da1fc8d667ba086ee239e5f053581739648a90566f191666cc63de16357f",
+  "parsedSettings": 351,
+  "checks": [
+    "all parsed sample entries recognized by matching native server or include syntax",
+    "no invalid parsed value",
+    "file line order retained",
+    "one GUI edit changes only selected line"
+  ],
+  "systemFilesModified": false,
+  "serverStarted": false,
+  "databaseConnections": false
+}

@@ -1,0 +1,12 @@
+{
+  "relatedTests": 34,
+  "fail": 0,
+  "nativeChecks": 11,
+  "sourceSha256": {
+    "lib/cron-lock.mjs": "3595ae078376cff4abd600f0001f45d58134b241a644641ce2dcb5e80f3f6940",
+    "lib/server-tools.mjs": "63eeb272302cd14e07e441360b61b048f2b5fa372e7b1518f5535c6dbb065dbd",
+    "lib/operations.mjs": "fbe17fd0443167a343c9e21a11794f5914b4c9d781c4d201a9d22a54e3e21e00",
+    "tests/cron-lock.test.mjs": "632e2b64d8e9169eda87fb914074e22c436ca74ef42ecaeda1de8e3a1cb97403",
+    "scripts/verification/cron-user-isolated.mjs": "1029a06e1d4dc0f0e0b8d454d474db7a232d285db2c14d79480379526eaaffb8"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "version": "postgres (PostgreSQL) 18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)",
+  "parameters": 348,
+  "describeConfigSha256": "765305a3dd2e42ae2df97db7fa5f70490f00cb1b751c8eae344a88bd48805582",
+  "sources": {
+    "ko": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/ko.po",
+      "sha256": "9136d5b4ec56ab9fb765c37fe1f8e81f4fd2f9a82be896a848e1de3e5676d9ee",
+      "translated": 346
+    },
+    "ja": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/ja.po",
+      "sha256": "3f191b55035638918af1b00acc9f7e1e964f722bf51e76ed4a4f3f1c1ffc4d58",
+      "translated": 347
+    },
+    "zh": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/zh_CN.po",
+      "sha256": "397da9c4092111617f413d56d0ea412710592c547d6fec3621455eb2d30f25bd",
+      "translated": 199
+    },
+    "es": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/es.po",
+      "sha256": "16c99a79686c3ba716acc444c4771c4f3229fb00beda428c0ff181f63b8aea78",
+      "translated": 262
+    },
+    "fr": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/fr.po",
+      "sha256": "00218bcd0a5d6e8c2f2283a5ebd3b0aaa4699b07a9e3e451292681df9bf92063",
+      "translated": 228
+    },
+    "de": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/de.po",
+      "sha256": "a055487ace3aa395c1935ce2e544f1b9a339ac61ffaadd7311ab3165b8ed7c15",
+      "translated": 347
+    },
+    "ru": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/ru.po",
+      "sha256": "4b23a9473ff764bf799fcb7337fe46ab1db863d211e8a0162287438873e40b6b",
+      "translated": 347
+    },
+    "pt": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/pt_BR.po",
+      "sha256": "460ddabba9897fe23ab8e5dffbc388c2c6bf7c7e47c33f2cf1aa942a44c5422f",
+      "translated": 204
+    },
+    "id": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/id.po",
+      "sha256": "13654282681ae89af3ac13ff027ad6ab9b48b5594b7ad94fcb376ff2a7ce9a69",
+      "translated": 139
+    },
+    "it": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/it.po",
+      "sha256": "7dd47295f7dc30cff54d3a2379706f52d2d900c26ef122adb43b1d239b9a991a",
+      "translated": 236
+    },
+    "ka": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/ka.po",
+      "sha256": "83060f9d66f8ea8ef937f15910e6c7a8575dedff87cc8b24ecf98e06b862ebd9",
+      "translated": 182
+    },
+    "pl": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/pl.po",
+      "sha256": "5b1e011a027e0bff156980e204ec35ff3956bd5714012ec451a010e3f99652f6",
+      "translated": 158
+    },
+    "sv": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/sv.po",
+      "sha256": "2da6ec5ba2fa37adb8df31d928bf87c74f3df44f1de23c163d5ffa19272fd13c",
+      "translated": 347
+    },
+    "tr": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/tr.po",
+      "sha256": "2627b58888dcea8c6fa2abeabcdcb5ed5ff2a5acc7ce642d1c851e0ad62cdc06",
+      "translated": 150
+    },
+    "uk": {
+      "url": "https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/po/uk.po",
+      "sha256": "d7f2805e22bdfd545a98dbac050cf5d1450eac43f46fffb2215eff2173811231",
+      "translated": 346
+    }
+  }
+}

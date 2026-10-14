@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+import {nginxPresets} from '../lib/nginx-presets.ts';
+import {nginxDirectiveField,validateNginxField} from '../lib/nginx-fields.ts';
+import {parseNginxTree,addNginxDirective} from '../lib/nginx-syntax.ts';
+test('valueless internal draft is offered only within location and cannot accept an argument',()=>{
+ assert.deepEqual(nginxPresets(null,null,'location').find(item=>item.name==='internal'),{name:'internal',value:'',kind:'directive'});
+ for(const context of ['main','events','http','server','upstream','map','stream:server'])assert(!nginxPresets(null,null,context).some(item=>item.name==='internal'));
+ const control=nginxDirectiveField('internal','','location');assert.equal(control.type,'flag');assert.equal(validateNginxField(control,''),'');assert.throws(()=>validateNginxField(control,'on'),/인수 없이/);
+ assert.equal(nginxDirectiveField('internal','','map').type,'text');assert.equal(nginxDirectiveField('internal','unexpected','location').type,'text');
+});
+test('compiled GUI can add internal without an input, then preserves its row and suppresses duplicate suggestions',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../components/nginx-block-settings.tsx',import.meta.url),'utf8'),{filename:'nginx-block-settings.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const native=createRequire(import.meta.url),module={exports:{}},hooks={...React,useEffect:()=>{},useState:initial=>[initial,()=>{}]};
+ const require=name=>name==='react'?hooks:name==='./nginx-icon'?{__esModule:true,default:'svg'}:name==='./language-provider'?{useLanguage:()=>({t:text=>text})}:name==='./ui/controls'?{Button:'button',TextInput:'input',Dropdown:'select',Switch:'switch'}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const find=(node,predicate)=>{if(!node||typeof node!=='object')return;if(predicate(node))return node;for(const child of React.Children.toArray(node.props?.children)){const result=find(child,predicate);if(result)return result;}};
+ let source='events {}\nhttp { server { location /private { root /tmp/html; } } }';
+ const location=()=>parseNginxTree(source)[1].children[0].children[0];
+ const props={context:'location',nodes:location().children,available:nginxPresets(null,null,'location'),onEdit:()=>{throw Error('No value editing expected');},onAdd:(name,value)=>{validateNginxField(nginxDirectiveField(name,value,'location'),value);source=addNginxDirective(source,location().id,name,value);return true;}};
+ const suggested=find(module.exports.default(props),node=>typeof node.type==='function'&&node.props.node?.id==='internal');assert(suggested);
+ const row=suggested.type(suggested.props);assert(!find(row,node=>node.type==='input'));assert.doesNotMatch(renderToStaticMarkup(row),/예시 값/,'valueless directives do not display an empty example value');
+ const add=find(row,node=>node.props?.['aria-label']==='초안에 항목 추가');assert.equal(add.props.disabled,false);add.props.onClick();
+ assert.match(source,/\binternal;/);assert.doesNotMatch(source,/\binternal (?:on|off);/);
+ props.nodes=location().children;const rendered=module.exports.default(props);
+ assert(!find(rendered,node=>typeof node.type==='function'&&node.props.available&&node.props.node?.id==='internal'));
+ const existing=find(rendered,node=>typeof node.type==='function'&&node.props.node?.label==='internal');assert(existing);
+ const existingRow=existing.type(existing.props);assert(!find(existingRow,node=>node.type==='input'||node.type==='button'));
+});

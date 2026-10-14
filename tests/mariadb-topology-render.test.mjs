@@ -1,0 +1,27 @@
+import {toastTestModule,toastTestModuleWithReact} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import React from 'react';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+test('MariaDB topology ignores superseded requests and clears inspected graph before refresh',async()=>{
+ const source=await readFile(new URL('../components/mariadb-topology.tsx',import.meta.url),'utf8');await loadBindings();
+ const compiled=await transform(source,{filename:'mariadb-topology.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const state=['/etc/mysql/my.cnf',null,null,false,''];let cursor=0;const refs=[];
+ const hooks={...React,useState:()=>{const index=cursor++;return[state[index],value=>{state[index]=value;}];},useRef:value=>{const ref={current:value};refs.push(ref);return ref;},useEffect:()=>{}};
+ const Button=()=>null,native=createRequire(import.meta.url),module={exports:{}};
+ const require=name=>name==='./ui/toast-provider'?toastTestModule(require):name==='./console-types'?consoleTypes:name==='react'?hooks:name==='./language-provider'?{useLanguage:()=>({t:text=>text})}:name==='./ui/controls'?{Button,Dropdown:()=>null,Badge:()=>null}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const pending=[],inspected=[];
+ const tree=module.exports.default({connected:true,security:{settings:{},available:{}},onInspect:value=>inspected.push(value),api:()=>new Promise((resolve,reject)=>pending.push({resolve,reject}))});
+ const button=tree.props.children[0].props.children.find(child=>child.type===Button);
+ state[1]={version:'old'};const first=button.props.onClick();assert.equal(state[1],null);assert.equal(inspected.at(-1),null);
+ const second=button.props.onClick();pending[0].reject(new Error('Superseded failure'));await first;
+ assert.equal(state[3],true);assert.equal(state[4],'');
+ const latest={version:'latest'};pending[1].resolve(latest);await second;
+ assert.equal(state[1],latest);assert.equal(inspected.at(-1),latest);assert.equal(state[3],false);
+ const third=button.props.onClick();refs[1].current++;pending[2].resolve({version:'obsolete'});await third;
+ assert.equal(state[1],null);assert.equal(inspected.at(-1),null);
+});

@@ -1,0 +1,4 @@
+import {randomBytes,scrypt as derive,timingSafeEqual} from 'node:crypto';
+function scrypt(password: string,salt: string): Promise<Buffer>{return new Promise((resolve,reject)=>derive(password,salt,64,(error,value)=>error?reject(error):resolve(value)));}
+export async function passwordHash(password: unknown): Promise<string>{if(typeof password!=='string'||password.length<12||password.length>256)throw Object.assign(Error('비밀번호는 12~256자로 설정하세요.'),{status:400});const salt=randomBytes(16).toString('hex');return 'scrypt$'+salt+'$'+(await scrypt(password,salt)).toString('hex');}
+export async function verifyPassword({password,hash}: {password: unknown; hash: unknown}): Promise<boolean>{if(typeof password!=='string'||password.length>256||typeof hash!=='string'||!/^scrypt\$[0-9a-f]{32}\$[0-9a-f]{128}$/.test(hash))return false;const [,salt,expected]=hash.split('$');return timingSafeEqual(await scrypt(password,salt),Buffer.from(expected,'hex'));}

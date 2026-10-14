@@ -1,0 +1,82 @@
+{
+  "status": "PASS",
+  "build": "/tmp/tastedev-source-build-X2FXgq",
+  "fixture": "/tmp/tastedev-prod-auth-kpxK8Y",
+  "checks": [
+    {
+      "route": "/overview",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/daemon",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/logs",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/recovery",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/security",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/audit",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/packages",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/terminal",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/ide/packages/nginx",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/ide/packages/certbot",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/ide/packages/postgresql",
+      "status": 307,
+      "loginReturnPreserved": true
+    },
+    {
+      "route": "/api/status",
+      "status": 401
+    },
+    {
+      "route": "/api/security",
+      "status": 401
+    },
+    {
+      "route": "/api/operations",
+      "status": 401
+    },
+    {
+      "route": "/api/nginx-tree",
+      "status": 401
+    }
+  ],
+  "loginStatus": 200,
+  "productionCsp": true,
+  "existingAccountsModified": false,
+  "systemFilesModified": false
+}

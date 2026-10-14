@@ -1,0 +1,18 @@
+{
+  "directory": "/tmp/tastedev-source-build-X2FXgq",
+  "log": "/tmp/tastedev-isolated-source-build-20261006.log",
+  "code": 0,
+  "sourceProject": "/mnt/data/ssd/works/projects/GXSOFT/TASTEDEV/sources/v1.0/tastedev-linux",
+  "copied": [
+    "app",
+    "components",
+    "lib",
+    "public",
+    "next.config.mjs",
+    "package.json"
+  ],
+  "envFilesCopied": false,
+  "developmentBuildModified": false,
+  "sourceFilesCompared": 346,
+  "sourceMismatches": []
+}

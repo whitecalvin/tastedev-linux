@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.runtime/
+src-tauri/target/
+
+# Generated release packages and root design previews
+/dist/
+/preview*.jpg
+__pycache__/
+*.py[cod]
+*.tsbuildinfo

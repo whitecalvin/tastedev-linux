@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,symlink,rm,chmod} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {nodeApps,saveNodeApp} from '../lib/node-apps.ts';
+import {nodeAppFiles} from '../lib/node-app-files.ts';
+test('Registered app file inspection hashes code without executing it and omits private environment variables',async()=>{
+ const directory=await mkdtemp(path.join('/mnt/data/build/tastedev-linux','linux-node-app-'));try{await writeFile(path.join(directory,'server.js'),'throw Error("must not execute");',{mode:0o600});await writeFile(path.join(directory,'.env'),'PORT=3145\nAPI_KEY=fixture-secret\n',{mode:0o600});const registry=await nodeApps();await saveNodeApp({version:registry.version,profile:{id:'inspect-app',label:'Inspect',directory,entry:'server.js',environmentFile:'.env'}});let result=await nodeAppFiles('inspect-app');assert.equal(result.ready,true);assert.equal(result.files[1].values.port,3145);assert(!JSON.stringify(result).includes('fixture-secret'));assert(!JSON.stringify(result).includes('must not execute'));await chmod(path.join(directory,'.env'),0o644);result=await nodeAppFiles('inspect-app');assert.equal(result.ready,false);assert.equal(result.files[1].status,'unsafe');await rm(path.join(directory,'server.js'));await symlink('.env',path.join(directory,'server.js'));assert.equal((await nodeAppFiles('inspect-app')).files[0].status,'unsafe');await mkdir(path.join(directory,'shared'));await mkdir(path.join(directory,'shared','child'));await writeFile(path.join(directory,'shared','child','server.js'),'// fixture',{mode:0o600});await chmod(path.join(directory,'shared'),0o777);const updated=await nodeApps();await saveNodeApp({version:updated.version,profile:{id:'inspect-app',label:'Inspect',directory,entry:'shared/child/server.js',environmentFile:'.env'}});assert.equal((await nodeAppFiles('inspect-app')).files[0].status,'unsafe');await assert.rejects(nodeAppFiles('unknown-app'),error=>error.status===404);}finally{await rm(directory,{recursive:true,force:true});}
+});

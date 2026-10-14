@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {prepareRedisApply} from '../lib/redis-apply-request.ts';
+const input={path:'/etc/redis/redis.conf',version:'a'.repeat(64),graphVersion:'b'.repeat(64),changes:{port:6380,appendOnly:true},confirm:true};
+test('Redis apply request preserves separate main and graph hashes and copies reviewed field changes',()=>{const result=prepareRedisApply(input);assert.deepEqual(result,input);assert.notEqual(result.changes,input.changes);});
+test('Redis apply request rejects arbitrary paths, unreviewed restart, unknown fields and invalid values',()=>{for(const change of [{path:'/tmp/redis.conf'},{confirm:false},{command:'id'},{graphVersion:'invalid'},{changes:{}},{changes:{requirepass:'secret'}},{changes:{port:true}},{changes:{port:65536}},{changes:{appendOnly:'yes'}}])assert.throws(()=>prepareRedisApply({...input,...change}));});

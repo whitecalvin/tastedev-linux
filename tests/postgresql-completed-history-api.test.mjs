@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {transform,loadBindings} from 'next/dist/build/swc/index.js';import {preparePostgresqlHistory} from '../lib/postgresql-completed-history.ts';
+test('completed history API authenticates reads and requires same-origin database sudo authorization and exact confirmation for imports',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../lib/api.ts',import.meta.url),'utf8'),{filename:'api.ts',jsc:{parser:{syntax:'typescript'}},module:{type:'commonjs'}}),module={exports:{}},calls=[],audits=[];let loggedIn=false,allowed=false,sudo=false;
+ const require=name=>name==='./auth.ts'?{cookieSession:async()=>loggedIn?{username:'fixture'}:null}:name==='./security.ts'?{securitySettings:async()=>({settings:{sudoWithoutPrompt:sudo}}),assertFeature:async(feature,options)=>{assert.equal(feature,'databaseChanges');assert.equal(options.sudo,true);if(!allowed)throw Object.assign(Error('disabled'),{status:403});},auditEvent:async(...args)=>audits.push(args)}:name==='./privilege.ts'?{runHelper:async(action,data)=>{calls.push({action,data});return action==='postgresql-history-backup'?{id:data.id,path:data.path,created:true}:{path:data.path,records:[],warnings:0,truncated:false};}}:name==='./postgresql-completed-history.ts'?{preparePostgresqlHistory}:{};
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const path='/etc/postgresql/18/fixture/postgresql.conf',id='d834ae1b-1108-4835-a860-82077d70d4f8',payload={path,id,version:'a'.repeat(64),confirm:true};
+ const get=()=>module.exports.handle(new Request('http://localhost/api/postgresql-restore-history?path='+encodeURIComponent(path)),'postgresql-restore-history');
+ const post=(data=payload,origin)=>module.exports.handle(new Request('http://localhost/api/postgresql-history-backup',{method:'POST',headers:{'content-type':'application/json',...(origin?{origin}:{})},body:JSON.stringify(data)}),'postgresql-history-backup');
+ assert.equal((await get()).status,401);assert.equal((await post()).status,401);loggedIn=true;assert.equal((await get()).status,403);assert.equal((await post()).status,403);assert.equal(calls.length,0);
+ sudo=true;assert.equal((await get()).status,200);assert.deepEqual(calls[0],{action:'postgresql-restore-history',data:{path}});
+ allowed=true;assert.equal((await post(payload,'https://other.example')).status,403);assert.equal(calls.length,1);
+ for(const changed of [{confirm:false},{version:'invalid'},{base:'/tmp'},{text:'private-input'}])assert.equal((await post({...payload,...changed})).status,409);
+ assert.equal((await post()).status,200);assert.deepEqual(calls[1],{action:'postgresql-history-backup',data:payload});assert(audits.some(item=>item[0]==='postgresql-history-backup'&&item[1]==='completed'));
+});

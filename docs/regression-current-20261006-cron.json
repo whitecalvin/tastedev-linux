@@ -1,0 +1,21 @@
+{
+  "exitCode": 0,
+  "summary": [
+    "\u2139 tests 1006",
+    "\u2139 suites 0",
+    "\u2139 pass 1006",
+    "\u2139 fail 0",
+    "\u2139 cancelled 0",
+    "\u2139 skipped 0",
+    "\u2139 todo 0",
+    "\u2139 duration_ms 99158.593652"
+  ],
+  "sourceSha256": {
+    "lib/server-tools.mjs": "14a2ddc200753c6ca24cf2e1f3438e3e59cdfa264b7da57735c1aa67409dbdc8",
+    "components/server-manager.jsx": "395b06ec4cdaebadd697ad42568daf0086863744b74eb7ffadb953ea80dba5e9",
+    "components/nginx-config-tree.jsx": "bf230a4a532556e80c2e99c1750436b3d4a3748b600a44c6243583210c7c72f3",
+    "tests/server-tools.test.mjs": "8ee68269a5a6aef2fb96b6ad1badc7a6f63ab77c8f4340a7e819dfffd44f021c",
+    "tests/server-manager-component.test.mjs": "c6b6f5a8b6fa875d5901dabd94785a9f15d0883064ceb15c5b84ddf1e186c633",
+    "tests/nginx-tree-render.test.mjs": "08106711f80e2f26882097213c242e6678ead5216f35912f3a2f78f65e94eff2"
+  }
+}

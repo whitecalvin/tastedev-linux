@@ -1,0 +1,14 @@
+.ui-toast-viewport{position:fixed;inset:auto;margin:0;padding:24px;border:0;box-sizing:border-box;background:transparent;color:inherit;inset-inline-end:0;bottom:calc(var(--app-statusbar-height,0px) + env(safe-area-inset-bottom,0px));z-index:1000;display:flex;flex-direction:column;gap:12px;width:min(528px,100vw);max-height:calc(100dvh - var(--app-statusbar-height,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;pointer-events:none;scrollbar-width:thin}
+.ui-toast{--toast-tone:#2563eb;display:grid;grid-template-columns:32px minmax(0,1fr) 28px;align-items:start;gap:12px;flex:none;padding:18px 16px;background:var(--bg,#fff);color:var(--text,#182230);border:1px solid color-mix(in srgb,var(--text,#182230) 20%,var(--bg,#fff));border-inline-start:3px solid var(--toast-tone);border-radius:0;box-shadow:0 2px 6px #00000014,0 8px 24px #00000026;pointer-events:auto}
+.ui-toast--success{--toast-tone:#15803d}.ui-toast--warning{--toast-tone:#a16207}.ui-toast--error{--toast-tone:#dc2626}
+html[data-theme=dark] .ui-toast{--toast-tone:#78aaff;box-shadow:0 2px 6px #0004,0 8px 24px #0006}html[data-theme=dark] .ui-toast--success{--toast-tone:#72d69a}html[data-theme=dark] .ui-toast--warning{--toast-tone:#f4c568}html[data-theme=dark] .ui-toast--error{--toast-tone:#ff8b8b}
+.ui-toast__icon{display:grid;place-items:center;width:32px;height:32px;background:transparent;color:var(--toast-tone)}
+.ui-toast svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ui-toast__content{min-width:0;padding-top:3px}.ui-toast__title{display:block;margin:0 0 5px;font-size:13px;font-weight:650;line-height:20px}.ui-toast__message{margin:0;font-size:12px;line-height:1.75;overflow-wrap:anywhere;white-space:pre-wrap}
+.ui-toast__close{display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:0;background:transparent;color:var(--muted,#52657b);cursor:pointer}.ui-toast__close svg{width:16px;height:16px}.ui-toast__close:hover{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text)}
+.ui-toast__action{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:4px 0;border:0;border-radius:0;background:transparent;color:var(--toast-tone);font:inherit;font-size:12px;font-weight:600;cursor:pointer}.ui-toast__action:hover{text-decoration:underline}.ui-toast :is(button):focus-visible{outline:2px solid var(--toast-tone);outline-offset:2px}
+@media(max-width:600px){.ui-toast-viewport{padding:12px;width:100vw}.ui-toast{padding:14px 12px;gap:10px}}
+
+body:has(.admin-statusbar) .ui-toast-viewport{--app-statusbar-height:26px}
+
+.ui-toast-viewport[popover]:not(:popover-open){display:none}

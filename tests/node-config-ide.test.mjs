@@ -1,0 +1,81 @@
+import {toastTestModuleWithReact,toastTestChildren} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+
+async function compile(file,mocks){
+ await loadBindings();
+ const source=await readFile(new URL(file,import.meta.url),'utf8');
+ const result=await transform(source,{filename:file,jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const native=createRequire(import.meta.url),module={exports:{}};
+ new Function('require','module','exports',result.code)(name=>Object.hasOwn(mocks,name)?mocks[name]:name==='./ui/ide-split-layout'?{__esModule:true,default:'div'}:native(name),module,module.exports);
+ return module.exports.default;
+}
+test('Node IDE renders the server registry, selects an app, preserves initialization and ignores stale registry results',async()=>{
+ const states=[],refs=[],effects=[],pending=[];let si=0,ri=0,ei=0;
+ const noop=()=>null,Button=()=>null;
+ const hooks={...React,useState:initial=>{const i=si++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],value=>states[i]=typeof value==='function'?value(states[i]):value];},useRef:initial=>refs[ri++]??(refs[ri-1]={current:initial}),useEffect:(fn,deps)=>{const i=ei++;if(!effects[i]||deps.some((v,k)=>v!==effects[i].deps[k]))pending.push(()=>{effects[i]?.cleanup?.();effects[i]={fn,deps,cleanup:fn()};});},useCallback:fn=>fn};
+ const buffers={};
+ const ide=await compile('../components/node-config-ide.tsx',{react:hooks,'./console-types':consoleTypes,'./language-provider':{useLanguage:()=>({t:value=>value})},'./ui/controls':{Button},'./node-apps':{__esModule:true,default:'NodeApps'},'./package-tool':{__esModule:true,default:'PackageTool'},'./node-env-file':{__esModule:true,default:'NodeEnvFile'},'./draft-provider':{useDraftState:()=>[buffers,noop]}, './ui/toast-provider':toastTestModuleWithReact(hooks)});
+ const registry={apps:[{id:'demo',label:'Demo',directory:'/srv/demo',entry:'server.js',environmentFile:'.env'}],version:'v1',workspace:{root:'/fixture/workspace',files:['app.env','nested/worker.env.production']}},calls=[];
+ const api=action=>new Promise(resolve=>calls.push({action,resolve}));let props={api,connected:true,security:null,requestedProfile:{kind:'nodejs'},initialData:registry};
+ const render=()=>{si=ri=ei=0;return ide(props);};
+ const flush=()=>{while(pending.length)pending.shift()();};
+ const nodes=tree=>{const list=[];function visit(node){if(!node||typeof node!=='object')return;list.push(node);React.Children.forEach(toastTestChildren(node),visit);}visit(tree);return list;};
+ let output=render();assert(JSON.stringify(output).includes('왼쪽 노드를 선택하세요.'));assert(nodes(output).some(n=>n.type==='button'&&n.props.title==='/srv/demo'));
+ flush();render();flush();assert.equal(calls.length,0);
+ for(const effect of effects)effect.cleanup?.();for(const effect of effects)effect.cleanup=effect.fn();render();flush();assert.equal(calls.length,0,'Strict Mode cannot discard or refetch the server registry');
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='/srv/demo').props.onClick();
+ const app=nodes(render()).find(n=>n.type==='NodeApps');assert.equal(app.props.selectedId,'demo');assert.equal(app.props.initialData,registry);assert.equal(app.props.expanded,true);
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='환경 설정').props.onClick();assert.equal(nodes(render()).find(n=>n.type==='PackageTool').props.nodeSection,'settings');
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='작업 폴더 환경 파일 관리').props.onClick();assert.equal(nodes(render()).find(n=>n.type==='PackageTool').props.nodeSection,'environment');const tool=nodes(render()).find(n=>n.type==='PackageTool');assert.equal(tool.props.tabbed,true);tool.props.onViewChange('code');assert(nodes(render()).some(n=>n.props.className==='nginx-node-inspector nginx-node-inspector--code'));
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='app.env').props.onClick();const file=nodes(render()).find(n=>n.type==='NodeEnvFile');assert.equal(file.props.name,'app.env');file.props.onViewChange('code');assert(nodes(render()).some(n=>n.props.className==='nginx-node-inspector nginx-node-inspector--code'));
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='/srv/demo').props.onClick();
+ const reload=nodes(render()).find(n=>n.type===Button&&n.props['aria-label']==='새로고침');const first=reload.props.onClick(),duplicate=reload.props.onClick();assert.equal(calls.length,2);calls[0].resolve({apps:[],version:'v2'});calls[1].resolve({root:'/fixture/workspace',files:['app.env']});await Promise.all([first,duplicate]);assert(JSON.stringify(render()).includes('왼쪽 노드를 선택하세요.'),'removed apps cannot remain selected');
+ const capturedSelection=nodes(render()).find(n=>n.type==='button'&&n.props.title==='환경 설정').props.onClick;capturedSelection();assert(nodes(render()).some(n=>n.type==='PackageTool'));
+ const late=nodes(render()).find(n=>n.type===Button).props.onClick();props={...props,connected:false};const disconnected=nodes(render());assert(!disconnected.some(n=>n.type==='PackageTool'||n.type==='NodeApps'||n.type==='NodeEnvFile'),'old selection must be hidden before the connection effect');assert(!disconnected.some(n=>n.type==='button'&&n.props.title==='app.env'),'old disk inventory must be hidden before the connection effect');flush();app.props.onUpdated(registry);calls[2].resolve(registry);calls[3].resolve({root:'/fixture/workspace',files:['app.env']});await late;
+ assert(!nodes(render()).some(n=>n.type==='button'&&n.props.title==='/srv/demo'),'late requests and child callbacks cannot restore a disconnected registry');
+ capturedSelection();assert(!nodes(render()).some(n=>n.type==='PackageTool'),'captured old tree clicks cannot open a selection under a new connection');
+ props={...props,connected:true};render();flush();assert.equal(calls.length,6);calls[4].resolve(registry);calls[5].resolve({root:'/fixture/workspace',files:['app.env']});await new Promise(resolve=>setImmediate(resolve));assert(nodes(render()).some(n=>n.type==='button'&&n.props.title==='/srv/demo'));
+ buffers['nodejs:removed.env']={name:'removed.env',kind:'nodejs',text:'PORT=4444',baseline:'PORT=3000'};assert(nodes(render()).some(n=>n.type==='button'&&n.props.title==='removed.env'&&n.props.children.includes('미저장')),'a missing disk file cannot hide an unsaved buffer');
+ const oldRefresh=nodes(render()).find(n=>n.type===Button&&n.props['aria-label']==='새로고침').props.onClick;const previousNode=nodes(render()).find(n=>n.type==='button'&&n.props.title==='/srv/demo');previousNode.props.onClick();assert(nodes(render()).some(n=>n.type==='NodeApps'));
+ props={...props,api:()=>assert.fail('render before effect must not request the new registry')};const switched=nodes(render());assert(!switched.some(n=>n.type==='NodeApps'||n.type==='button'&&n.props.title==='/srv/demo'),'API replacement hides the old app and its selection before effects');assert(!switched.some(n=>n.type==='button'&&n.props.title==='app.env'),'old workspace inventory cannot appear on a different API');assert(switched.some(n=>n.type==='button'&&n.props.title==='removed.env'),'unsaved user buffers remain available');previousNode.props.onClick();assert(!nodes(render()).some(n=>n.type==='NodeApps'),'captured old app click cannot select a previous server app');const count=calls.length;await oldRefresh();assert.equal(calls.length,count,'captured refresh cannot use an old API under the replacement scope');for(const effect of effects)effect.cleanup?.();await oldRefresh();assert.equal(calls.length,count,'an unmounted IDE cannot refresh');
+});
+
+test('Node app management consumes a selected server app before effects or extra API calls',async()=>{
+ const noop=()=>null,controls=Object.fromEntries(['Button','TextInput','Checkbox','Dropdown'].map(name=>[name,name]));
+ const component=await compile('../components/node-apps.tsx',{'./console-types':consoleTypes,react:{...React,useState:initial=>[typeof initial==='function'?initial():initial,noop],useEffect:noop,useRef:initial=>({current:initial}),useId:()=> 'node-fixture'},'./language-provider':{useLanguage:()=>({t:value=>value})},'./ui/controls':controls,...Object.fromEntries(['node-service-backups','node-service-recovery','node-service-update','node-service-control','node-app-env','node-app-logs'].map(name=>['./'+name,{__esModule:true,default:noop}])), './ui/toast-provider':toastTestModuleWithReact({...React,useState:initial=>[typeof initial==='function'?initial():initial,noop],useEffect:noop,useRef:initial=>({current:initial}),useId:()=> 'node-fixture'})});
+ const registry={apps:[{id:'demo',label:'Demo',directory:'/srv/demo',entry:'server.js',environmentFile:'.env'}],version:'v1'};
+ const tree=component({connected:true,api:()=>{throw Error('unexpected initial API call');},security:null,initialData:registry,selectedId:'demo',expanded:true});
+ const nodes=[];function visit(node){if(!node||typeof node!=='object')return;nodes.push(node);React.Children.forEach(toastTestChildren(node),visit);}visit(tree);
+ assert.equal(tree.props.open,true);assert.equal(nodes.find(n=>n.type==='TextInput'&&n.props.label==='앱 ID').props.value,'demo');assert.equal(nodes.find(n=>n.type==='TextInput'&&n.props.label==='앱 폴더').props.value,'/srv/demo');
+});
+
+test('registered Node app tabs isolate visible controls and preserve registration edits across tabs',async()=>{
+ const states=[],refs=[],effects=[];let si=0,ri=0,ei=0;const noop=()=>null,Button='Button',TextInput='TextInput',hooks={...React,useState:initial=>{const at=si++;if(!(at in states))states[at]=typeof initial==='function'?initial():initial;return[states[at],value=>states[at]=typeof value==='function'?value(states[at]):value];},useRef:initial=>refs[ri++]??(refs[ri-1]={current:initial}),useEffect:(fn,deps)=>{const at=ei++;if(!effects[at]||deps.some((v,i)=>v!==effects[at].deps[i])){effects[at]?.cleanup?.();effects[at]={deps,cleanup:fn()};}},useId:()=> 'node-tabs-fixture'};
+ const component=await compile('../components/node-apps.tsx',{react:hooks,'./console-types':consoleTypes,'./language-provider':{useLanguage:()=>({t:value=>value})},'./ui/controls':{Button,TextInput,Checkbox:'Checkbox',Dropdown:'Dropdown'},...Object.fromEntries(['node-service-backups','node-service-recovery','node-service-update','node-service-control','node-app-env','node-app-logs'].map(name=>['./'+name,{__esModule:true,default:name}])), './ui/toast-provider':toastTestModuleWithReact(hooks)});
+ const registry={apps:[{id:'demo',label:'Demo',directory:'/srv/demo',entry:'server.js',environmentFile:'.env'}],version:'v1'},props={connected:true,api:()=>assert.fail('tab changes must not fetch'),security:null,initialData:registry,selectedId:'demo',expanded:true,tabbed:true};
+ const render=()=>{si=ri=ei=0;return component(props);};
+ function visible(){const result=[];function visit(node){if(!node||typeof node!=='object'||node.props?.hidden)return;result.push(node);React.Children.forEach(toastTestChildren(node),visit);}visit(render());return result;}
+ let nodes=visible();assert.equal(nodes.filter(node=>node.props?.role==='tab').length,4);assert(!nodes.some(node=>node.type==='node-app-env'||node.type==='node-app-logs'));assert(!nodes.some(node=>node.props?.children==='등록 앱 파일 확인'));
+ nodes.find(node=>node.type===TextInput&&node.props.label==='앱 이름').props.onChange({target:{value:'Edited'}});
+ nodes.find(node=>node.props?.role==='tab'&&node.props.children==='환경 설정').props.onClick();nodes=visible();assert(nodes.some(node=>node.type==='node-app-env'));assert(!nodes.some(node=>node.type===TextInput&&node.props.label==='앱 이름'));
+ nodes.find(node=>node.props?.role==='tab'&&node.props.children==='서비스').props.onClick();nodes=visible();assert(nodes.some(node=>node.type==='node-service-control'));assert(!nodes.some(node=>node.type==='node-app-env'));
+ nodes.find(node=>node.props?.role==='tab'&&node.props.children==='로그').props.onClick();nodes=visible();assert(nodes.some(node=>node.type==='node-app-logs'));assert(!nodes.some(node=>node.type==='node-service-control'));
+ nodes.find(node=>node.props?.role==='tab'&&node.props.children==='설정').props.onClick();nodes=visible();assert.equal(nodes.find(node=>node.type===TextInput&&node.props.label==='앱 이름').props.value,'Edited');const panel=nodes.find(node=>node.props?.role==='tabpanel'),active=nodes.find(node=>node.props?.role==='tab'&&node.props['aria-selected']);assert.equal(panel.props['aria-labelledby'],active.props.id);assert.equal(active.props['aria-controls'],panel.props.id);
+ nodes.find(node=>node.props?.role==='tab'&&node.props.children==='서비스').props.onClick();nodes=visible();const recovery=nodes.find(node=>node.type==='node-service-recovery');assert.equal(typeof recovery.props.onRecovered,'function');recovery.props.onRecovered({recovered:true});nodes=visible();props.api=async action=>action.startsWith('node-app-files')?{id:'demo',ready:true,files:[]}:action.startsWith('node-app-service-plan')?{id:'demo',registryVersion:'v1',unit:'tastedev-node-demo.service',runtime:{status:'ready'},serviceOptions:{restart:'no'},files:[],text:'unit'}:assert.fail('unexpected setup request');render();await visible().find(node=>node.type===Button&&node.props.children==='등록 앱 파일 확인').props.onClick();await visible().find(node=>node.type===Button&&node.props.children==='앱 서비스 설정 검토').props.onClick();nodes=visible();const beforeRecovery=nodes.find(node=>node.type==='node-service-update').props.recoveryVersion;nodes.find(node=>node.type==='node-service-recovery').props.onRecovered({recovered:true});assert.equal(visible().find(node=>node.type==='node-service-update').props.recoveryVersion,beforeRecovery+1);const control=nodes.find(node=>node.type==='node-service-control');let statusCalls=0;props.api=async action=>{statusCalls++;assert.equal(action,'node-app-service-status?id=demo');return {id:'demo',registryVersion:'v1',available:true,LoadState:'loaded',ActiveState:'active',SubState:'running',UnitFileState:'enabled'};};render();await visible().find(node=>node.type==='node-service-control').props.onCompleted();assert.equal(statusCalls,1);assert(JSON.stringify(visible()).includes('active'));props.api=async()=>({id:'other',registryVersion:'v1',available:true});render();await assert.rejects(visible().find(node=>node.type==='node-service-control').props.onCompleted(),/서비스 설정을 다시 검토/);
+});
+test('failed Node registry seed stays visible as guidance and never becomes an editable registration baseline',async()=>{
+ const states=[],refs=[];let si=0,ri=0;const noop=()=>null;
+ const hooks={...React,useState:initial=>{const i=si++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useRef:initial=>refs[ri++]??(refs[ri-1]={current:initial}),useEffect:noop,useCallback:fn=>fn};
+ const ide=await compile('../components/node-config-ide.tsx',{react:hooks,'./console-types':consoleTypes,'./language-provider':{useLanguage:()=>({t:value=>value})},'./ui/controls':{Button:noop},'./node-apps':{__esModule:true,default:'NodeApps'},'./package-tool':{__esModule:true,default:noop},'./node-env-file':{__esModule:true,default:noop},'./draft-provider':{useDraftState:()=>[{},noop]}, './ui/toast-provider':toastTestModuleWithReact(hooks)});
+ const initialData={apps:[],error:'앱 등록 파일을 읽을 수 없습니다.',workspace:{root:'',files:[]}};
+ const api=()=>assert.fail('failed initial seed must not request during render');
+ function render(){si=ri=0;return ide({api,connected:true,security:null,requestedProfile:{kind:'nodejs'},initialData});}
+ const nodes=tree=>{const all=[];function visit(node){if(!node||typeof node!=='object')return;all.push(node);React.Children.forEach(toastTestChildren(node),visit);}visit(tree);return all;};
+ nodes(render()).find(n=>n.type==='button'&&n.props.title==='Node.js 앱 등록').props.onClick();const tree=render();assert.equal(nodes(tree).find(n=>n.type==='NodeApps').props.initialData,null);assert(JSON.stringify(tree).includes(initialData.error));
+});

@@ -1,0 +1,59 @@
+{
+  "status": "PASS",
+  "scope": "Literal t(), setNotice(), setError(), setMessage(), and component Error() messages; other dynamic messages and untranslated languages still require review",
+  "literalKeys": 865,
+  "statusLiteralKeys": 18,
+  "errorLiteralKeys": 24,
+  "dynamicCalls": 161,
+  "dynamicStatusCalls": 123,
+  "dynamicErrorCalls": 7,
+  "missingEnglish": [],
+  "invalid": [],
+  "coverage": {
+    "ar": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "de": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "en": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "es": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "fr": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "ja": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "pt": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "ru": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    },
+    "zh": {
+      "translated": 1436,
+      "total": 1436,
+      "missing": 0
+    }
+  }
+}

@@ -1,0 +1,21 @@
+import {toastTestModule,toastTestModuleWithReact} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+import {configDefaults} from '../lib/config-schema.ts';
+test('selected PostgreSQL file offers import on mount and code edits dismiss stale import without replacing comparison baseline',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../components/package-config.tsx',import.meta.url),'utf8'),{filename:'package-config.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const native=createRequire(new URL('../components/package-config.tsx',import.meta.url)),module={exports:{}},states=[],refs=[],effects=[],dependencies=[];let si=0,ri=0,ei=0;
+ const baseline={path:'/etc/postgresql/16/main/postgresql.conf',version:'original',warnings:[],values:{port:5432}},drafts={postgresql:{...configDefaults('postgresql'),port:5444}},baselines={postgresql:baseline},noop=()=>null,Button=()=>null;
+ const hooks={...React,useState:initial=>{const i=si++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useRef:initial=>refs[ri++]??(refs[ri-1]={current:initial}),useMemo:fn=>fn(),useEffect:(fn,deps)=>{const i=ei++;if(!dependencies[i]||deps.some((value,index)=>!Object.is(value,dependencies[i][index]))){dependencies[i]=deps;effects.push(fn);}}};
+ const require=name=>name==='./ui/toast-provider'?toastTestModule(require):name==='./console-types'?consoleTypes:name==='react'?hooks:name==='./draft-provider'?{useDraftState:key=>[key==='packageKind'?'postgresql':key==='packageDrafts'?drafts:key==='packageBaselines'?baselines:1,noop]}:name==='./language-provider'?{useLanguage:()=>({t:text=>text})}:name==='./ui/controls'?{Button,Switch:noop,Dropdown:noop,TextInput:noop,Badge:noop}:name.startsWith('./')?{default:noop}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const props={connected:true,api:()=>{throw Error('No request expected');},requestedProfile:{kind:'postgresql'},requestedConfig:baseline,codeRevision:null};
+ const render=()=>{si=ri=ei=0;return module.exports.default(props);},flush=()=>{effects.splice(0).forEach(fn=>fn());};
+ render();flush();let tree=render();assert(JSON.stringify(tree).includes('폼에 반영'),'profile initialization must not erase selected-file import');
+ props.codeRevision='port = 5444';render();flush();tree=render();assert(!JSON.stringify(tree).includes('폼에 반영'));assert.equal(drafts.postgresql.port,5444);assert.equal(baselines.postgresql,baseline);assert.equal(baselines.postgresql.version,'original');
+});

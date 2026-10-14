@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-06",
+  "host": "192.168.0.103",
+  "scope": "read-only installed runtime observation",
+  "sshAccount": "whitecalvin",
+  "uid": 1000,
+  "gid": 1000,
+  "packages": {
+    "tastedev-linux": "0.1.0",
+    "nginx": "1.31.6-1~noble",
+    "certbot": "2.9.0-1",
+    "postgresql": "18+293.pgdg24.04+1",
+    "cron": "3.0pl1-184ubuntu2"
+  },
+  "appService": {
+    "LoadState": "loaded",
+    "ActiveState": "active",
+    "SubState": "running",
+    "User": "whitecalvin",
+    "Group": "1000",
+    "NoNewPrivileges": "no"
+  },
+  "cronReadable": true,
+  "cronBytes": 1114,
+  "cronSha256": "acbe1588d48382e2a137e601e93f66d1046b3e71e087ce09170f51040c7ee196",
+  "remoteHelperSha256": "d09e9f6fecf00e3a56042f29f6176db9abb56fcb413fa61cac6e29887b32bdf4",
+  "currentHelperSha256": "776113cf5425f76d548a38971b1fddb4d9f2ccbe22ba27cf46049f6bee6fd640",
+  "remoteAuthSha256": "26fb2a36f2c6f47472d0e9c999715745777406cce5ae7357c651bf40a9a8d00a",
+  "observedHttp": {
+    "port": 8791,
+    "overview": 307,
+    "terminal": 307,
+    "nginxIde": 307,
+    "authStatus": {
+      "status": 200,
+      "authenticated": false
+    },
+    "cronApi": 401
+  },
+  "currentBuildInstalledVerified": false,
+  "sourceCommit": null,
+  "distributionPackageSha256": null,
+  "hostChanged": false,
+  "schedulerExecutionVerified": false,
+  "authenticatedGuiVerified": false,
+  "debVerificationPerformed": false
+}

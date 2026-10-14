@@ -1,0 +1,21 @@
+import {isPostgresqlWorkPath} from './postgresql-work-directory.ts';
+import path from 'node:path';
+const categories=['invalid-method','invalid-address','invalid-option','missing-include','invalid-rule'];
+const fail: ()=>never=()=>{throw Object.assign(Error('PostgreSQL 접속 규칙 검수 응답을 확인하세요.'),{status:400});};
+// Private validation workspace supplied by the trusted runner, never by HTTP.
+export function postgresqlHbaValidationPlan(root: unknown,major: unknown){
+ if(typeof root!=='string'||!isPostgresqlWorkPath(root,'linux-pg-hba-')||typeof major!=='number'||!Number.isInteger(major)||major<15||major>99)fail();
+ const data=path.join(root,'data'),hba=path.join(root,'pg_hba.conf'),report=path.join(root,'result.json'),binary='/usr/lib/postgresql/'+major+'/bin/';
+ const fileExpression=major===15?"'"+hba+"'":'file_name',orderExpression=major===15?'line_number':'rule_number NULLS LAST,file_name,line_number';
+ const sql="COPY (SELECT json_build_object('schema',1,'rows',COALESCE(json_agg(json_build_object('file',"+fileExpression+",'line',line_number,'method',auth_method,'error',CASE WHEN error IS NULL THEN NULL WHEN error LIKE '%authentication method%' THEN 'invalid-method' WHEN error LIKE '%IP address%' OR error LIKE '%CIDR%' OR error LIKE '%netmask%' THEN 'invalid-address' WHEN error LIKE '%authentication option%' THEN 'invalid-option' WHEN error LIKE '%file%' AND (error LIKE '%open%' OR error LIKE '%read%') THEN 'missing-include' ELSE 'invalid-rule' END) ORDER BY "+orderExpression+"),'[]'::json)) FROM pg_hba_file_rules) TO '"+report+"';\n";
+ return Object.freeze({major,root,hba,report,data,init:Object.freeze({binary:binary+'initdb',args:Object.freeze(['-D',data,'--no-locale','--encoding=UTF8','--auth=trust','--username=tastedev_validation','--no-sync'])}),inspect:Object.freeze({binary:binary+'postgres',args:Object.freeze(['--single','-D',data,'-c','hba_file='+hba,'-c','listen_addresses=','-c','unix_socket_directories=','-c','shared_buffers=16MB','-c','max_connections=10','postgres']),stdin:sql}),scope:'private-cluster-single-user',operationalConfigurationLoaded:false,networkListeners:false});
+}
+// Native rule output exposes only line/path/category, never database/user lists,
+// authentication option values or raw native messages that can include secrets.
+export function postgresqlHbaValidationReport(text: unknown,{major,files}: {major?: unknown; files?: unknown}={}){
+ if(typeof text!=='string'||Buffer.byteLength(text)>262144||typeof major!=='number'||!Number.isInteger(major)||!Array.isArray(files)||files.length>256)fail();
+ const mapped=new Map<string,string>();for(const item of files){if(!item||typeof item.nativePath!=='string'||!isPostgresqlWorkPath(item.nativePath,'linux-pg-hba-',{file:true})||item.nativePath.split('/').includes('..')||typeof item.sourcePath!=='string'||!/^\/etc\/postgresql\/\d+\/[a-zA-Z0-9_-]+\//.test(item.sourcePath)||/[\x00-\x1f\x7f]/.test(item.sourcePath)||path.resolve(item.sourcePath)!==item.sourcePath||mapped.has(item.nativePath))fail();mapped.set(item.nativePath,item.sourcePath);}
+ let parsed: unknown;try{parsed=JSON.parse(text);}catch{fail();}const report=parsed!==null&&typeof parsed==='object'?parsed as Record<string,unknown>:{};if(report.schema!==1||!Array.isArray(report.rows)||report.rows.length>10000)fail();
+ const diagnostics: {path: string; line: number; category: string}[]=[],rules: {path: string; line: number; method: string}[]=[];for(const input of report.rows){const row=input!==null&&typeof input==='object'?input as Record<string,unknown>:{};if(typeof row.file!=='string'||!mapped.has(row.file)||typeof row.line!=='number'||!Number.isInteger(row.line)||row.line<1||row.line>262145||!(row.method===null||typeof row.method==='string'&&/^[a-z0-9-]{1,32}$/.test(row.method))||!(row.error===null||typeof row.error==='string'&&categories.includes(row.error))||row.error===null&&row.method===null)fail();if(row.error)diagnostics.push({path:mapped.get(row.file)!,line:row.line,category:row.error as string});else rules.push({path:mapped.get(row.file)!,line:row.line,method:row.method as string});}
+ return {valid:diagnostics.length===0,engine:'postgresql-hba-file-rules',major,ruleCount:report.rows.length,rules,diagnostics,scope:'private-cluster-single-user',operationalContextValidated:false,authenticationAttempted:false};
+}

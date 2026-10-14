@@ -1,0 +1,105 @@
+{
+  "viewport": "1280x720",
+  "results": [
+    {
+      "route": "/overview",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 645
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/daemon",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 539
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/logs",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 1178
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/recovery",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 723
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/security",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 1494
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/audit",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [],
+      "topbarHeight": 56,
+      "width": 1280
+    },
+    {
+      "route": "/packages",
+      "documentHeight": 720,
+      "documentWidth": 1280,
+      "height": 720,
+      "scrollRegions": [
+        {
+          "className": "management-body",
+          "clientHeight": 526,
+          "scrollHeight": 740
+        }
+      ],
+      "topbarHeight": 56,
+      "width": 1280
+    }
+  ],
+  "systemSettingsModified": false
+}

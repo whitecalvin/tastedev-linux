@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';
+import type {NginxAstNode} from '../../lib/nginx-syntax.ts';
+export type NativeNginxReport={workDirectory:string;status:'PASS'|'FAIL'|'PARTIAL';binary:string;checks:({name:string;status:'PASS'|'FAIL';output?:string;context?:string;example?:string;value?:string;sourceSHA256?:string;rejected?:boolean;error?:string;values?:string[]}|{name:string;status:'SKIP'|'NOT_RUN';reason:string})[];serverStarted?:boolean;operationalFilesChanged?:boolean;operatingServicesChanged?:boolean;scope?:string;version?:string;binarySHA256?:string;error?:string;fixtureRemoved?:boolean;sourceSHA256?:string;temporaryServerStopped?:boolean};
+export function requiredBlock(nodes:readonly NginxAstNode[],label:string){const node=nodes.find(node=>node.label===label&&node.kind==='block');assert(node&&node.kind==='block','Missing fixture block: '+label);return node;}
+export function commandStderr(error:unknown):string{assert(error!==null&&typeof error==='object'&&'stderr' in error&&typeof error.stderr==='string','Missing native command stderr');return error.stderr;}
+export function diagnostic(error:unknown):string{return error instanceof Error?(error.stack||error.message):String(error);}

@@ -1,0 +1,70 @@
+{
+  "name": "tastedev-linux",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 8787",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1 --port 8787",
+    "test": "node scripts/run-tests.ts",
+    "desktop:check": "node scripts/desktop-cargo.ts check",
+    "desktop:start": "node scripts/desktop-cargo.ts start",
+    "account:setup": "node scripts/setup-admin.ts",
+    "package:deb": "node --experimental-strip-types scripts/build-deb.ts",
+    "package:verify": "node --experimental-strip-types scripts/verify-deb.ts",
+    "package:desktop": "node scripts/build-desktop-deb.ts",
+    "package:desktop:verify": "node scripts/verify-desktop-deb.ts",
+    "verify:mariadb:native": "node scripts/verify-mariadb-native.ts",
+    "verify:postgresql:native": "node scripts/verify-postgresql-native.ts",
+    "verify:postgresql:local": "node scripts/verification/postgresql-local-lifecycle.ts",
+    "verify:postgresql:host": "node scripts/verify-postgresql-host.ts",
+    "verify:postgresql:restore:host": "node scripts/verify-postgresql-graph-restore-host.ts",
+    "verify:nginx:native": "node scripts/verify-nginx-native.ts",
+    "verify:terminal:pty": "node scripts/verify-terminal-pty.ts",
+    "package:apt": "node scripts/build-apt-repository.ts",
+    "package:apt:sign": "node scripts/sign-apt-repository.ts",
+    "verify:nginx:candidate": "node scripts/verify-nginx-candidate-native.ts",
+    "verify:redis:sandbox": "node scripts/verify-redis-sandbox-native.ts",
+    "postinstall": "node scripts/prepare-next-cli.ts",
+    "i18n:check": "node scripts/check-translations.ts",
+    "i18n:descriptions": "node scripts/check-setting-descriptions.ts",
+    "verify:terminal:cli": "node scripts/verify-terminal-cli.ts",
+    "verify:postgresql:hba:native": "node scripts/verify-postgresql-hba-native.ts",
+    "verify:postgresql:hba:operation": "node scripts/verify-postgresql-hba-operation-native.ts",
+    "verify:admin:lock:native": "node scripts/verify-admin-lock-native.ts",
+    "verify:postgresql:runtime:host": "node scripts/verify-postgresql-runtime-host.ts",
+    "verify:postgresql:catalog": "node scripts/verify-postgresql-catalog-native.ts",
+    "verify:nginx:reviewed": "node scripts/verification/nginx-reviewed-isolated.ts",
+    "verify:nginx:helper": "node scripts/verification/nginx-helper-isolated.ts",
+    "verify:cron:isolated": "node scripts/verification/cron-isolated.ts",
+    "verify:cron:user:isolated": "node scripts/verification/cron-user-isolated.ts",
+    "verify:redis:startup:isolated": "node scripts/verification/redis-startup-isolated.ts",
+    "verify:cron:scheduler:isolated": "node scripts/verification/cron-scheduler-isolated.ts",
+    "typecheck": "tsc --noEmit --incremental false",
+    "i18n:coverage": "node scripts/check-language-coverage.ts"
+  },
+  "dependencies": {
+    "@next/env": "16.3.8",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "better-auth": "^1.7.7",
+    "better-sqlite3": "^13.0.3",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": false
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

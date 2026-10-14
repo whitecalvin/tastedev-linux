@@ -1,0 +1,22 @@
+import {toastTestModule,toastTestChildren,toastTestModuleWithReact} from './support/toast-test-module.mjs';
+import * as consoleTypes from '../components/console-types.ts';
+import test from 'node:test';import assert from 'node:assert/strict';import React from 'react';
+import {readFile} from 'node:fs/promises';import {createRequire} from 'node:module';import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+import {defaultSecurity} from '../lib/security.ts';
+test('security refresh updates clean drafts, preserves edits and stale save version, and ignores duplicate or disconnected requests',async()=>{
+ await loadBindings();const compiled=await transform(await readFile(new URL('../components/security-panel.tsx',import.meta.url),'utf8'),{filename:'security-panel.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
+ const states=[],refs=[],deps=[],effects=[];let si=0,ri=0,ei=0;const Button=()=>null,Switch=()=>null,noop=()=>null,native=createRequire(import.meta.url),module={exports:{}};
+ const hooks={...React,useState:initial=>{const i=si++;if(!(i in states))states[i]=initial;return[states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useRef:initial=>refs[ri++]??(refs[ri-1]={current:initial}),useEffect:(fn,next)=>{const i=ei++;if(!deps[i]||next.some((v,j)=>!Object.is(v,deps[i][j]))){deps[i]=next;effects.push(fn);}}};
+ const require=name=>name==='./ui/toast-provider'?toastTestModule(require):name==='./console-types'?consoleTypes:name==='react'?hooks:name==='./language-provider'?{useLanguage:()=>({t:text=>text})}:name==='./ui/controls'?{Button,Switch,Badge:noop,Dropdown:noop,TextInput:noop}:name.startsWith('./')?{default:noop}:native(name);
+ new Function('require','module','exports',compiled.code)(require,module,module.exports);
+ const snapshot=(version,settings)=>({version,settings:{...defaultSecurity,...settings},available:{},requirements:{}}),calls=[],changed=[];let resolve,reject;
+ const props={initialData:snapshot('a'),connected:true,onChange:next=>changed.push(next),api:(action,input)=>{calls.push({action,input});return new Promise((done,fail)=>{resolve=done;reject=fail;});}};
+ const render=()=>{si=ri=ei=0;return module.exports.default(props);},flush=()=>effects.splice(0).forEach(fn=>fn());
+ const find=(tree,label)=>{if(!tree||typeof tree!=='object')return null;if(tree.props?.label===label||tree.type===Button&&(tree.props['aria-label']===label||tree.props.children===label))return tree;for(const child of React.Children.toArray(toastTestChildren(tree))){const found=find(child,label);if(found)return found;}return null;};
+ render();flush();props.initialData=snapshot('b',{readOnly:false});render();flush();assert.equal(find(render(),'조회 전용').props.checked,false);
+ find(render(),'조회 전용').props.onChange({target:{checked:true}});render();props.initialData=snapshot('c',{readOnly:false,audit:false});render();flush();let tree=render();assert.equal(find(tree,'조회 전용').props.checked,true);assert.equal(find(tree,'보안 옵션 저장').props.disabled,true);assert(JSON.stringify(tree).includes('편집한 값은 보존'));
+ find(tree,'조회 전용').props.onChange({target:{checked:false}});tree=render();assert.equal(find(tree,'보안 옵션 저장').props.disabled,true,'reverting a local switch does not acknowledge a newer server version');
+ find(tree,'편집 취소 · 최신 서버 값 사용').props.onClick();tree=render();assert.equal(find(tree,'조회 전용').props.checked,false);assert.equal(find(tree,'보안 옵션 저장').props.disabled,false);
+ find(tree,'작업 폴더 파일 저장').props.onChange({target:{checked:true}});tree=render();const save=find(tree,'보안 옵션 저장').props.onClick;const pending=save(),duplicate=save();assert.equal(calls.length,1);assert.equal(calls[0].input.version,'c');resolve(snapshot('d',{readOnly:false,fileEditing:true,audit:false}));await Promise.all([pending,duplicate]);assert.equal(changed.at(-1).version,'d');assert.equal(find(render(),'보안 옵션 저장').props.disabled,false);
+ const before=changed.length,late=find(render(),'보안 설정 조회').props.onClick();props.connected=false;render();reject(Error('stale refresh failure'));await late;assert.equal(changed.length,before);assert(!JSON.stringify(render()).includes('stale refresh failure'));
+});

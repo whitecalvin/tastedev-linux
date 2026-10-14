@@ -1,0 +1,61 @@
+import type {NginxPreset} from './nginx-presets.ts';
+import type {NginxSettingInfo} from './nginx-setting-info.ts';
+const url='https://nginx.org/en/docs/http/ngx_http_proxy_module.html#';
+const contexts=['http','server','location'];
+// Editable examples for the open-source 1.28 series, not detected installation defaults.
+const rows: [string,string,(string | null)?,string[]?][]=[
+ ['proxy_bind','off','업스트림 연결의 출발 IP·포트를 지정합니다. off는 운영체제 선택을 사용합니다. transparent는 별도 권한과 라우팅 구성이 필요합니다.'],
+ ['proxy_buffer_size','4k'],['proxy_buffering','on'],['proxy_buffers','8 4k'],
+ ['proxy_busy_buffers_size','8k','응답을 계속 읽는 동안 클라이언트 전송에 사용할 버퍼 크기입니다. 전체 proxy_buffers보다 작아야 합니다.'],
+ ['proxy_cache','off'],['proxy_cache_background_update','off'],['proxy_cache_bypass','$http_authorization'],
+ ['proxy_cache_convert_head','on','캐시용 HEAD 요청을 GET으로 변환합니다. 끄면 캐시 키에 요청 메서드를 포함하세요.'],
+ ['proxy_cache_key','$scheme$proxy_host$request_uri'],['proxy_cache_lock','off'],
+ ['proxy_cache_lock_age','5s','캐시를 채우는 요청이 이 시간을 넘기면 추가 업스트림 요청을 허용합니다.'],
+ ['proxy_cache_lock_timeout','5s','캐시 잠금 대기 한도입니다. 넘긴 요청의 응답은 캐시에 저장하지 않습니다.'],
+ ['proxy_cache_max_range_offset','0','범위 요청의 시작 위치가 이 크기를 넘으면 응답을 캐시하지 않습니다.'],
+ ['proxy_cache_methods','GET HEAD','캐시에 허용할 요청 메서드 목록입니다. GET과 HEAD는 항상 포함됩니다.'],
+ ['proxy_cache_min_uses','1','응답을 캐시에 저장하기 전 필요한 동일 요청 횟수입니다.'],
+ ['proxy_cache_path','/var/cache/nginx/proxy levels=1:2 keys_zone=proxy_cache:10m',null,['http']],
+ ['proxy_cache_revalidate','off','만료 캐시를 조건부 요청으로 재검증합니다.'],
+ ['proxy_cache_use_stale','off'],['proxy_cache_valid','200 10m'],['proxy_connect_timeout','60s'],
+ ['proxy_cookie_domain','off','응답 쿠키의 Domain을 변경합니다. off는 상위 규칙을 해제합니다.'],
+ ['proxy_cookie_flags','off','응답 쿠키의 secure·httponly·samesite 플래그를 변경합니다. nginx 1.19.3 이상이 필요합니다.'],
+ ['proxy_cookie_path','off'],['proxy_force_ranges','off','Accept-Ranges 헤더와 관계없이 응답의 바이트 범위 요청을 허용합니다.'],
+ ['proxy_headers_hash_bucket_size','64'],['proxy_headers_hash_max_size','512'],
+ ['proxy_hide_header','X-Powered-By','클라이언트에 전달하지 않을 업스트림 응답 헤더입니다.'],
+ ['proxy_http_version','1.1'],['proxy_ignore_client_abort','off','클라이언트 연결 종료 후에도 업스트림 요청을 유지합니다.'],
+ ['proxy_ignore_headers','X-Accel-Expires','캐시·버퍼링 등에 영향을 주는 응답 헤더의 처리를 무시합니다. 헤더 전달 여부는 proxy_hide_header로 정합니다.'],
+ ['proxy_intercept_errors','off'],['proxy_limit_rate','0','업스트림 응답 읽기 속도를 초당 바이트로 제한합니다. 0은 제한 없음이며 버퍼링이 필요합니다.'],
+ ['proxy_max_temp_file_size','1024m'],['proxy_method','GET','업스트림 요청 메서드를 변경합니다. 본문과 헤더 설정도 함께 확인하세요.'],
+ ['proxy_next_upstream','error timeout','다른 업스트림을 시도할 조건입니다. 클라이언트 전송이 시작된 뒤에는 전환할 수 없습니다.'],
+ ['proxy_next_upstream_timeout','0','다른 업스트림을 시도할 전체 시간 한도입니다. 0은 제한 없음입니다.'],
+ ['proxy_next_upstream_tries','0','업스트림 재시도 횟수 한도입니다. 0은 이 지시어에 의한 제한 없음입니다.'],
+ ['proxy_no_cache','$http_authorization','조건 값이 비어 있지 않고 0이 아니면 응답을 캐시에 저장하지 않습니다. 캐시에서 읽지 않는 조건은 proxy_cache_bypass로 지정합니다.'],
+ ['proxy_pass','http://127.0.0.1:3000',null,['location']],
+ ['proxy_pass_header','Server','기본적으로 숨기는 업스트림 응답 헤더의 전달을 허용합니다.'],
+ ['proxy_pass_request_body','on'],['proxy_pass_request_headers','on'],
+ ['proxy_pass_trailers','off','업스트림의 HTTP trailer 필드를 전달합니다. nginx 1.27.2 이상이며 HTTP 버전·TE 헤더 설정도 필요합니다.'],
+ ['proxy_read_timeout','60s'],['proxy_redirect','off'],['proxy_request_buffering','on'],
+ ['proxy_send_lowat','0','업스트림 전송의 최소 버퍼량입니다. Linux에서는 무시됩니다.'],['proxy_send_timeout','60s'],
+ ['proxy_set_body','$request_body','업스트림에 보낼 요청 본문을 변경합니다.'],['proxy_set_header','Host $host'],
+ ['proxy_socket_keepalive','off','업스트림 소켓의 운영체제 TCP keepalive를 켭니다. HTTP 연결 재사용과 별개입니다.'],
+ ['proxy_ssl_certificate','/etc/nginx/upstream-client.pem','HTTPS 업스트림에 제시할 클라이언트 PEM 인증서 파일입니다.'],
+ ['proxy_ssl_certificate_cache','off','변수로 지정한 업스트림 인증서·키를 캐시합니다. max·inactive·valid를 지정하며 nginx 1.27.4 이상이 필요합니다.'],
+ ['proxy_ssl_certificate_key','/etc/nginx/upstream-client.key','업스트림 클라이언트 인증서의 PEM 개인 키 경로입니다.'],
+ ['proxy_ssl_ciphers','DEFAULT','HTTPS 업스트림의 OpenSSL 암호 목록입니다.'],
+ ['proxy_ssl_conf_command','MinProtocol TLSv1.2','업스트림 TLS 연결의 OpenSSL 설정 명령입니다. nginx 1.19.4·OpenSSL 1.0.2 이상이 필요합니다.'],
+ ['proxy_ssl_crl','/etc/nginx/upstream-crl.pem','업스트림 인증서 검증에 사용할 PEM 폐기 목록입니다.'],
+ ['proxy_ssl_name','$proxy_host'],
+ ['proxy_ssl_password_file','/etc/nginx/upstream-key-passwords','암호화된 업스트림 개인 키를 읽기 위한 암호 파일 경로입니다. 암호는 이 화면에서 읽지 않습니다.'],
+ ['proxy_ssl_protocols','TLSv1.2 TLSv1.3','HTTPS 업스트림에 허용할 TLS 프로토콜입니다. 연결된 OpenSSL의 지원 범위도 확인하세요.'],
+ ['proxy_ssl_server_name','off'],['proxy_ssl_session_reuse','on','HTTPS 업스트림의 TLS 세션 재사용을 허용합니다.'],
+ ['proxy_ssl_trusted_certificate','/etc/nginx/upstream-ca.pem','업스트림 인증서 검증의 신뢰 CA PEM 파일입니다. proxy_ssl_verify와 함께 사용합니다.'],
+ ['proxy_ssl_verify','off'],['proxy_ssl_verify_depth','1','업스트림 인증서 체인 검증의 최대 깊이입니다.'],
+ ['proxy_store','off','응답을 로컬 파일로 저장합니다. on은 root·alias 경로를 사용하며 캐시와는 다른 기능입니다.'],
+ ['proxy_store_access','user:rw','새로 저장한 파일·디렉터리의 접근 권한입니다. user·group·all에 r 또는 rw를 지정합니다.'],
+ ['proxy_temp_file_write_size','8k','응답 임시 파일에 한 번에 기록할 크기입니다. proxy_buffer_size 이상이어야 합니다.'],
+ ['proxy_temp_path','/var/cache/nginx/proxy_temp','업스트림 응답 임시 파일의 디렉터리와 최대 세 단계 하위 경로 구조입니다.']
+];
+export function nginxProxyPresets(context: string): NginxPreset[]{return rows.filter(row=>(row[3]||contexts).includes(context||'')).map<NginxPreset>(([name,value])=>({name,value,kind:'directive'}));}
+export function nginxProxySettingInfo(name: string,context?: string | null): NginxSettingInfo | null{const row=rows.find(row=>row[0]===name&&row[2]&&(!context||(row[3]||contexts).includes(context||'')));return row?.[2]?{description:row[2],url:url+name}:null;}
+export const nginxProxyNames=Object.freeze(rows.map(row=>row[0]));

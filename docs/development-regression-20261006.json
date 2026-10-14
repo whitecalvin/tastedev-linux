@@ -1,0 +1,79 @@
+{
+  "scope": "development-source regression and isolated Next.js build",
+  "date": "2026-10-06",
+  "regression": {
+    "command": "npm test",
+    "tests": 988,
+    "passed": 988,
+    "failed": 0,
+    "exitCode": 0,
+    "log": "/tmp/tastedev-linux-current-regression.log"
+  },
+  "build": {
+    "command": "npm run build",
+    "directory": "/tmp/tastedev-ui-build-33jy4rpz",
+    "exitCode": 0,
+    "log": "/tmp/tastedev-ui-build-current.log",
+    "comparedSourceFiles": 389,
+    "sourceDifferences": []
+  },
+  "translations": {
+    "status": "PASS",
+    "scope": "Literal t(), setNotice(), setError(), setMessage(), and component Error() messages; other dynamic messages and untranslated languages still require review",
+    "coverage": {
+      "ar": {
+        "translated": 591,
+        "total": 1429,
+        "missing": 838
+      },
+      "de": {
+        "translated": 733,
+        "total": 1429,
+        "missing": 696
+      },
+      "en": {
+        "translated": 1429,
+        "total": 1429,
+        "missing": 0
+      },
+      "es": {
+        "translated": 733,
+        "total": 1429,
+        "missing": 696
+      },
+      "fr": {
+        "translated": 733,
+        "total": 1429,
+        "missing": 696
+      },
+      "ja": {
+        "translated": 1429,
+        "total": 1429,
+        "missing": 0
+      },
+      "pt": {
+        "translated": 1429,
+        "total": 1429,
+        "missing": 0
+      },
+      "ru": {
+        "translated": 591,
+        "total": 1429,
+        "missing": 838
+      },
+      "zh": {
+        "translated": 733,
+        "total": 1429,
+        "missing": 696
+      }
+    }
+  },
+  "remaining": [
+    "additional Linux locale UI translation",
+    "actual OS Korean IME composition verification",
+    "AI key reuse/new decision and integration verification",
+    "installed service/helper and real operation acceptance testing",
+    "final deployment acceptance"
+  ],
+  "deploymentPerformed": false
+}

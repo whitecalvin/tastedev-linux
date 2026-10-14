@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LINUX Server IDE",
+  "version": "0.1.0",
+  "identifier": "com.gxsoft.linux",
+  "build": {
+    "devUrl": "http://127.0.0.1:8787",
+    "frontendDist": "http://127.0.0.1:8791"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "LINUX Server IDE",
+        "width": 1440,
+        "height": 980,
+        "minWidth": 720,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "deb"
+    ],
+    "icon": [
+      "icons/icon.png"
+    ]
+  }
+}

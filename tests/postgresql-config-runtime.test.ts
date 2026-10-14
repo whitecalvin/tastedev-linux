@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {readAdminRuntimeModule} from '../scripts/admin/runtime-source.mts';
+import {adminRuntimeFiles} from '../scripts/admin/runtime-files.mts';
+
+test('Node22 emitted PostgreSQL config graphs private candidates and namespace inspection preserve regressions without a TypeScript loader',async()=>{
+ const root=await mkdtemp(join('/mnt/data/build/tastedev-linux','pg-config-runtime-'));
+ try{
+  for(const file of adminRuntimeFiles)await writeFile(join(root,file),await readAdminRuntimeModule(file),{mode:0o600});
+  const files:string[]=[];
+  for(const name of ['config-graph','config-inspect','config-validation']){
+   const source=await readFile(new URL('./postgresql-'+name+'.test.mjs',import.meta.url),'utf8');
+   const output=join(root,name+'.test.mjs');
+   await writeFile(output,source.replace(/\.\.\/lib\/([a-z-]+)\.(?:ts|mjs)/g,'./$1.mjs'),{mode:0o600});files.push(output);
+  }
+  await mkdir(join(root,'helpers'));
+  const diagnostic=await readFile(new URL('./helpers/postgresql-diagnostic-worker.mjs',import.meta.url),'utf8');
+  await writeFile(join(root,'helpers','postgresql-diagnostic-worker.mjs'),diagnostic.replace(/\.\.\/\.\.\/lib\/([a-z-]+)\.(?:ts|mjs)/g,'../$1.mjs'),{mode:0o600});
+  const environment={...process.env};delete environment.NODE_TEST_CONTEXT;
+  const result=spawnSync('/usr/bin/node',['--no-experimental-strip-types','--test','--test-reporter=tap','--test-concurrency=1',...files],{encoding:'utf8',env:environment,timeout:15000,maxBuffer:8*1024*1024});assert.equal(result.status,0,result.stdout+result.stderr);assert.match(result.stdout,/# pass 14/);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

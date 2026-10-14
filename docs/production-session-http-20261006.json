@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "build": "/tmp/tastedev-source-build-X2FXgq",
+  "fixture": "/tmp/tastedev-prod-session-JU6URA",
+  "routes": [
+    {
+      "route": "/overview",
+      "status": 200
+    },
+    {
+      "route": "/daemon",
+      "status": 200
+    },
+    {
+      "route": "/logs",
+      "status": 200
+    },
+    {
+      "route": "/recovery",
+      "status": 200
+    },
+    {
+      "route": "/security",
+      "status": 200
+    },
+    {
+      "route": "/audit",
+      "status": 200
+    },
+    {
+      "route": "/packages",
+      "status": 200
+    },
+    {
+      "route": "/terminal",
+      "status": 200
+    },
+    {
+      "route": "/ide/packages/nginx",
+      "status": 200
+    },
+    {
+      "route": "/ide/packages/certbot",
+      "status": 200
+    },
+    {
+      "route": "/ide/packages/postgresql",
+      "status": 200
+    }
+  ],
+  "sessionSurvivesProcessRestart": true,
+  "authenticatedLoginReturnPreserved": true,
+  "logoutRevokesOldCookie": true,
+  "cookieHttpOnlyAndStrict": true,
+  "fixtureCredentialsOnly": true,
+  "existingAccountsModified": false,
+  "systemFilesModified": false
+}

@@ -1,0 +1,22 @@
+{
+  "command": "npm test",
+  "exitCode": 0,
+  "tests": 1004,
+  "pass": 1004,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "durationMs": 99018.401337,
+  "log": "/tmp/tastedev-regression-current-20261006.log",
+  "sourceSha256": {
+    "app/globals.css": "dc45a2704aa91b38a92103f985ab1bd22d56b511dbe3b6f7e5cf0926d383af85",
+    "components/nginx-code-editor.jsx": "971af82750df4495dc64fc4fa5dc4fed57f3b691a7b2f5ca198de139e8630370",
+    "components/nginx-toolbar.jsx": "40e7213a95fe19b94cac0dce86bfa3ca2038d3924d1dd1b4ec11e5163f17862b",
+    "components/server-manager.jsx": "cbcd9237f9d4ee1da5d4885f9fe9ef1a5e2342c9ac44c624241873b92f89ee79",
+    "app/(console)/ide/packages/[package]/page.jsx": "43b60709c389eb3ceb6f23ef23a55950f9f3d6c6df1f1cd0315240c3ca8dfa54",
+    "components/file-settings.jsx": "706cf21f57b72bf6e927c54f82e93701c3d76da15125f95b1b64b230cd6da7ef",
+    "lib/postgresql-setting-type.mjs": "028bea5780350280bc04e3f176d01eed3cb44c5ee32d6663f1f698983edf0344",
+    "lib/i18n.mjs": "ea86e378db172de9c02bc59e2d0771c753b5904d1735a8a15f7f188fedeab069",
+    "lib/locales/it.json": "9afd103ea4228245cdbae3ec935d5422e82a96f09fad3b78a2f6f7cac6ebab8f"
+  }
+}

@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {readAdminRuntimeModule} from '../scripts/admin/runtime-source.mts';
+import {adminRuntimeFiles} from '../scripts/admin/runtime-files.mts';
+
+test('Node22 emitted HBA operations and durable recovery work without a TypeScript loader',async()=>{
+ const root=await mkdtemp(join('/mnt/data/build/tastedev-linux','pg-hba-operation-runtime-'));
+ try{
+  for(const file of adminRuntimeFiles)await writeFile(join(root,file),await readAdminRuntimeModule(file),{mode:0o600});
+  const files:string[]=[];
+  for(const name of ['operation','journal']){
+   const source=await readFile(new URL('./postgresql-hba-'+name+'.test.mjs',import.meta.url),'utf8');
+   const output=join(root,name+'.test.mjs');
+   await writeFile(output,source.replace(/\.\.\/lib\/([a-z-]+)\.(?:ts|mjs)/g,'./$1.mjs'),{mode:0o600});files.push(output);
+  }
+  await mkdir(join(root,'helpers'),{mode:0o700});
+  const helper=await readFile(new URL('./helpers/hba-journal-crash.mjs',import.meta.url),'utf8');
+  await writeFile(join(root,'helpers/hba-journal-crash.mjs'),helper.replace(/\.\.\/\.\.\/lib\/([a-z-]+)\.(?:ts|mjs)/g,'../$1.mjs'),{mode:0o600});
+  const environment={...process.env};delete environment.NODE_TEST_CONTEXT;
+  const result=spawnSync('/usr/bin/node',['--no-experimental-strip-types','--test','--test-reporter=tap','--test-concurrency=1',...files],{encoding:'utf8',env:environment,timeout:30000,maxBuffer:8*1024*1024});
+  assert.equal(result.status,0,result.stdout+result.stderr);assert.match(result.stdout,/# pass 16\b/);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

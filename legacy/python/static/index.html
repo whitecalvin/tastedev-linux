@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="리눅스 서버의 웹 패키지 설치 관리"><title>LINUX · 서버 패키지 관리</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><header><a href="/" class="brand"><span class="logo">L</span> LINUX <small>SERVER CONSOLE</small></a><span class="connection" id="connection">연결 대기</span></header>
+<main><div class="eyebrow">LINUX / WEB STACK</div><h1>서버의 시작을,<br><span>한 화면에서.</span></h1><p class="intro">nginx, Certbot, Node.js. 웹 서비스에 필요한 패키지를<br>이 콘솔이 실행되는 리눅스 서버에 설치하세요.</p>
+<section class="login" id="login"><label for="token">관리자 토큰</label><div><input id="token" type="password" autocomplete="off" placeholder="서버 실행 시 설정한 토큰"><button id="connect">서버 연결 →</button></div></section>
+<div id="message" role="status" aria-live="polite"></div>
+<section class="serverbar"><div><span class="dot"></span><strong id="hostname">서버 연결 전</strong><small>설치 대상 장비</small></div><span id="mode">상태를 확인하려면 연결하세요</span><button id="refresh" class="ghost" disabled>새로고침 ↻</button></section>
+<section class="cards" aria-label="설치 패키지">
+<article><div class="cardtop"><span class="symbol nginx">N</span><span class="badge" id="state-nginx">확인 전</span></div><h2>nginx</h2><p>빠르고 안정적인 웹 서버.<br>웹사이트 제공과 리버스 프록시의 기반.</p><div class="meta" id="version-nginx">패키지 상태를 불러오세요</div><label class="select"><input type="checkbox" value="nginx" disabled> 설치 대상에 추가</label></article>
+<article><div class="cardtop"><span class="symbol certbot">C</span><span class="badge" id="state-certbot">확인 전</span></div><h2>Certbot</h2><p>HTTPS 인증서 관리 도구.<br>nginx 연동 플러그인까지 함께 설치.</p><div class="meta" id="version-certbot">인증서 발급은 별도 설정이 필요합니다</div><label class="select"><input type="checkbox" value="certbot" disabled> 설치 대상에 추가</label></article>
+<article><div class="cardtop"><span class="symbol node">JS</span><span class="badge" id="state-nodejs">확인 전</span></div><h2>Node.js</h2><p>서버에서 실행하는 JavaScript.<br>앱 실행과 npm 패키지 관리를 함께.</p><div class="meta" id="version-nodejs">배포판 저장소 버전을 설치합니다</div><label class="select"><input type="checkbox" value="nodejs" disabled> 설치 대상에 추가</label></article>
+</section>
+<section class="action"><div><strong id="count">0개 패키지 선택</strong><p>선택한 패키지의 설치 명령을 먼저 확인하세요.</p></div><button id="preview" disabled>설치 검토 →</button></section>
+<section class="terminal"><div class="terminalhead"><strong>작업 로그</strong><span id="jobstatus">대기 중</span></div><pre id="logs" aria-live="polite">서버에 연결하면 설치 진행 상황이 여기에 표시됩니다.</pre></section>
+<footer><span>LINUX / LINUX SERVER TOOLS</span><span>Ubuntu · Debian / 로컬 장비 관리</span></footer></main>
+<dialog id="review"><h2>설치 내용을 확인하세요</h2><p>대상: <strong id="target"></strong></p><pre id="command"></pre><p>패키지와 의존성을 설치하며, 패키지 기본 동작에 따라 서비스가 시작될 수 있습니다. 이미 설치된 선택 패키지는 업그레이드하지 않습니다.</p><label><input id="confirm" type="checkbox"> 이 장비의 설치 영향을 확인했습니다.</label><div class="dialogactions"><button id="cancel" class="ghost">취소</button><button id="install" disabled>설치 시작</button></div></dialog></body></html>

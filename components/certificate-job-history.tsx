@@ -1,0 +1,20 @@
+'use client';
+import {ToastNotice} from './ui/toast-provider';
+import {errorMessage,type CertificateApi,type CertificateHistoryRow,type CertificateHistoryJob} from './console-types';
+import {certificateJobLog} from '../lib/certificate-job-log.ts';
+import {certificateJobBackups} from '../lib/certificate-job-backups.ts';
+import NginxBackupsPanel from './nginx-backups-panel';
+import {useEffect,useId,useRef,useState} from 'react';
+import {Button} from './ui/controls';
+import {useLanguage} from './language-provider';
+export default function CertificateJobHistory({api,connected,allowedNginx=false,policyVersion}: {api: CertificateApi; connected: boolean; allowedNginx?: boolean; policyVersion?: string}){
+ const {t,locale}=useLanguage(),title=useId(),dialog=useRef<HTMLDialogElement>(null),revision=useRef(0);
+ const [rows,setRows]=useState<CertificateHistoryRow[]>([]),[record,setRecord]=useState<CertificateHistoryJob | null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[limited,setLimited]=useState(false);
+ const context=useRef({api,connected});if(context.current.api!==api||context.current.connected!==connected){context.current={api,connected};revision.current++;}
+ useEffect(()=>{dialog.current?.close();setRows([]);setRecord(null);setError('');setBusy(false);return()=>{revision.current++;};},[api,connected]);
+ function close(){revision.current++;dialog.current?.close();setBusy(false);setError('');}
+ async function load(id: string | null=null){if(!connected)return;const ticket=++revision.current;setBusy(true);setError('');setRecord(null);try{if(id){const data=await api(`admin-job?id=${encodeURIComponent(id)}`);if(ticket!==revision.current)return;setRecord(data.job);}else{const data=await api('admin-jobs');if(ticket!==revision.current)return;setRows(data.jobs);setLimited(Boolean(data.warnings||data.truncated));}}catch(e){if(ticket===revision.current)setError(errorMessage(e));}finally{if(ticket===revision.current)setBusy(false);}}
+ function statusLabel(status: string){return t(status==='success'?'작업 완료':status==='running'?'진행 중':status==='recovery-required'?'실행 상태 확인 필요':'작업 실패');}
+ function icon(name: string,path: string,click: () => void,disabled=false){return <Button className="nginx-icon-button" variant="secondary" title={t(name)} aria-label={t(name)} onClick={click} disabled={disabled}><svg className="nginx-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={path}/></svg></Button>;}
+ return <>{icon('작업 로그','M4 4h16v16H4zM8 9h8M8 13h8M8 17h5',()=>{dialog.current?.showModal();load();},!connected)}<dialog ref={dialog} className="nginx-operation-dialog certificate-job-history" aria-labelledby={title} onCancel={e=>{e.preventDefault();close();}} onClose={()=>{revision.current++;setBusy(false);}}><header><h2 id={title}>{t('인증서 작업')} · {t('작업 로그')}</h2><div>{icon('새로고침','M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1',()=>load(),busy||!connected)}{icon('닫기','M6 6l12 12M6 18L18 6',close)}</div></header><div className="certificate-history-body"><nav aria-label={t('작업 로그')}>{rows.map(row=><button type="button" key={row.id} aria-pressed={record?.id===row.id} disabled={busy} onClick={()=>load(row.id)}><span>{statusLabel(row.status)}</span><time>{new Date(row.finishedAt||row.startedAt).toLocaleString(locale)}</time><small>{row.id}</small></button>)}</nav><section aria-busy={busy}>{record?<><strong>{statusLabel(record.status)}</strong>{record.notice&&<p role="status" className="hint">{t(record.notice)}</p>}<pre className="manager-preview">{'$ '+record.command.join(' ')+'\n'+certificateJobLog(record.logs)}</pre>{certificateJobBackups(record.logs).length>0&&<NginxBackupsPanel key={record.id} api={api} connected={connected} allowed={allowedNginx} policyVersion={policyVersion} backupIds={certificateJobBackups(record.logs).map((item: {id: string})=>item.id)}/>}</>:<p className="hint">{busy?t('불러오는 중'):t('작업 로그')+' · '+rows.length}</p>}{limited&&<p className="hint">{t('일부 손상되거나 너무 긴 기록은 제외되었습니다.')}</p>}{error&&<ToastNotice message={error} kind={'error'}/>}</section></div></dialog></>;
+}

@@ -1,0 +1,42 @@
+import type {Stats} from 'node:fs';
+import {hasErrorCode} from './error-code.ts';
+type GraphFile={path:string;version:string;bytes:number};
+type GraphDirectory={path:string;names:string[];version:string};
+type GraphEdge={from:string;line:number;kind:string;target:string;targets:string[]};
+export type PostgresqlConfigGraph={root:string;cluster:string;files:GraphFile[];directories:GraphDirectory[];edges:GraphEdge[];missing:string[];complete:true;scope:string;operationalResourcesVerified:false;version:string};
+export type PostgresqlGraphOptions={base?:string;ownerUid?:number;overrides?:Map<string,string>};
+type GraphRecord={graph:PostgresqlConfigGraph;proof:string;target:string;options:PostgresqlGraphOptions;observed:string;sources:Map<string,string>;attributes:Map<string,{uid:number;gid:number;mode:number}>};
+const object=(value:unknown):value is object=>value!==null&&typeof value==='object';
+import {open,lstat,readdir} from 'node:fs/promises';import {constants} from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';
+import {parsePostgresqlSettings} from './postgresql-settings-text.ts';
+const records=new WeakMap<object,GraphRecord>(),hash=(value:string|Buffer)=>createHash('sha256').update(value).digest('hex');
+const fail:(message?:string,status?:number)=>never=(message='PostgreSQL 설정 파일과 include 연결을 확인하세요.',status=400)=>{throw Object.assign(Error(message),{status});};
+const identity=(stat:Stats)=>(['dev','ino','uid','gid','mode','nlink','size','mtimeMs','ctimeMs'] as const).map(key=>stat[key]);
+export function postgresqlConfigRoot(target:unknown){if(typeof target!=='string'||!/^\/etc\/postgresql\/([1-9][0-9]?)\/([a-zA-Z0-9][a-zA-Z0-9_-]*)\/postgresql\.conf$/.test(target))fail();return path.dirname(target);}
+function decode(value:string){if(value[0]!=="'"||value.at(-1)!=="'"||value.includes('\\'))fail();const text=value.slice(1,-1).replaceAll("''","'");if(!text||/[\x00-\x1f\x7f]/.test(text))fail();return text;}
+// Source snapshots are internal. Public graph contains paths/hashes, never options.
+export async function postgresqlConfigGraph(value:unknown,{base='/etc',ownerUid=process.getuid?.(),overrides=new Map()}:PostgresqlGraphOptions={}){
+ const root=postgresqlConfigRoot(value),target=typeof value==='string'?value:fail();if(typeof ownerUid!=='number'||!Number.isSafeInteger(ownerUid)||ownerUid<0||!(overrides instanceof Map))fail();
+ const permitted=(name:unknown)=>typeof name==='string'&&name.startsWith(root+'/')&&path.normalize(name)===name&&!/[\x00-\x1f\x7f]/.test(name);
+ if([...overrides].some(([name,text])=>!permitted(name)||typeof text!=='string'||Buffer.byteLength(text)>262144||text.includes('\0')))fail();
+ const physical=(name:string)=>path.join(base,name.slice('/etc/'.length));const observed:unknown[]=[],files=new Map<string,GraphFile>(),sources=new Map<string,string>(),attributes=new Map<string,{uid:number;gid:number;mode:number}>(),directories=new Map<string,GraphDirectory>(),edges:GraphEdge[]=[],missing=new Set<string>();let visits=0,total=0;
+ function trusted(stat:Stats,directory=false){return !stat.isSymbolicLink()&&[0,ownerUid].includes(stat.uid)&&!(stat.mode&0o022)&&(directory?stat.isDirectory():stat.isFile()&&stat.nlink===1&&stat.size<=262144);}
+ async function safe(name:string){if(!trusted(await lstat(base),true))fail();if(!permitted(name)&&name!==root)fail();let current=base;const parts=name.slice(5).split('/');for(const part of parts.slice(0,-1)){current=path.join(current,part);const stat=await lstat(current);if(!trusted(stat,true))fail();}return physical(name);}
+ async function read(name:string,optional:boolean){let file,before;try{file=await safe(name);before=await lstat(file);}catch(error){if(optional&&hasErrorCode(error,'ENOENT')){missing.add(name);observed.push([name,'missing']);return null;}throw error;}if(!trusted(before))fail();const handle=await open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  try{const stat=await handle.stat();if(!trusted(stat)||JSON.stringify(identity(stat))!==JSON.stringify(identity(before)))fail();const buffer=Buffer.alloc(262145);let size=0;while(size<buffer.length){const result=await handle.read(buffer,size,buffer.length-size,null);if(!result.bytesRead)break;size+=result.bytesRead;}const after=await handle.stat(),named=await lstat(file);if(size>262144||JSON.stringify(identity(stat))!==JSON.stringify(identity(after))||JSON.stringify(identity(stat))!==JSON.stringify(identity(named)))fail();const bytes=buffer.subarray(0,size);observed.push([name,identity(stat),hash(bytes)]);attributes.set(name,{uid:stat.uid,gid:stat.gid,mode:stat.mode&0o777});const original=new TextDecoder('utf-8',{fatal:true}).decode(bytes),text=overrides.get(name)??original;if(text.includes('\0'))fail();return text;}finally{await handle.close();}
+ }
+ async function visit(name:string,stack:string[]=[],optional=false){if(++visits>300||stack.length>=16||stack.includes(name))fail();const text=await read(name,optional);if(text===null)return;if(!files.has(name)){total+=Buffer.byteLength(text);if(files.size>=100||total>1048576)fail();}else if(files.get(name)?.version!==hash(text))fail();files.set(name,{path:name,version:hash(text),bytes:Buffer.byteLength(text)});sources.set(name,text);
+  const rows=parsePostgresqlSettings(text).filter(row=>row.enabled&&['include','include_if_exists','include_dir'].includes(row.name.toLowerCase()));
+  for(const row of rows){if(!row.valid||edges.length>=300)fail();const kind=row.name.toLowerCase(),value=decode(row.value),destination=path.isAbsolute(value)?value:path.resolve(path.dirname(name),value);if(!permitted(destination))fail();const edge:GraphEdge={from:name,line:row.line,kind,target:destination,targets:[]};edges.push(edge);
+   if(kind!=='include_dir'){edge.targets.push(destination);await visit(destination,[...stack,name],kind==='include_if_exists');continue;}
+   const directory=await safe(destination),before=await lstat(directory);if(!trusted(before,true))fail();const names:string[]=[];for(const entry of await readdir(directory,{withFileTypes:true})){if(entry.name.startsWith('.')||!entry.name.endsWith('.conf')||entry.isDirectory())continue;if(entry.isSymbolicLink()||!entry.isFile())fail();names.push(entry.name);}names.sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b)));if(names.length>100)fail();const after=await lstat(directory);if(JSON.stringify(identity(before))!==JSON.stringify(identity(after)))fail();observed.push([destination,identity(before),names]);const known=directories.get(destination);if(known&&JSON.stringify(known.names)!==JSON.stringify(names))fail();directories.set(destination,{path:destination,names,version:hash(JSON.stringify(names))});for(const leaf of names){const child=path.join(destination,leaf);edge.targets.push(child);await visit(child,[...stack,name]);}
+  }
+ }
+ await visit(target);const entries=[...files.values()].sort((a,b)=>Buffer.compare(Buffer.from(a.path),Buffer.from(b.path))),dirs=[...directories.values()],absent=[...missing].sort();
+ const graph:PostgresqlConfigGraph={root:target,cluster:root,files:entries,directories:dirs,edges,missing:absent,complete:true,scope:'cluster-config-includes',operationalResourcesVerified:false,version:hash(JSON.stringify({files:entries,directories:dirs,edges,missing:absent}))};
+ const proof=hash(JSON.stringify(graph));records.set(graph,{graph,proof,target,options:{base,ownerUid,overrides:new Map(overrides)},observed:hash(JSON.stringify(observed)),sources:new Map(sources),attributes:new Map(attributes)});return graph;
+}
+export function postgresqlConfigSources(value:unknown){if(!object(value))fail();const record=records.get(value);if(!record||record.proof!==hash(JSON.stringify(value)))fail();return new Map(record.sources);}
+export async function assertPostgresqlConfigGraph(value:unknown){if(!object(value))fail();const record=records.get(value);if(!record||record.proof!==hash(JSON.stringify(value)))fail();try{const current=await postgresqlConfigGraph(record.target,record.options),proof=records.get(current);if(current.version!==record.graph.version||!proof||proof.observed!==record.observed)fail('PostgreSQL 설정 파일 또는 include 연결이 변경되었습니다.',409);}catch{fail('PostgreSQL 설정 파일 또는 include 연결이 변경되었습니다.',409);}return record.graph;}
+
+export function postgresqlConfigFileAttributes(value:unknown){if(!object(value))fail();const record=records.get(value);if(!record||record.proof!==hash(JSON.stringify(value)))fail();return new Map([...record.attributes].map(([name,attributes])=>[name,{...attributes}]));}

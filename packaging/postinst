@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+if [ "${1:-}" = configure ]; then
+ /usr/bin/node /usr/lib/tastedev-linux/scripts/configure-service-account.mjs --install || {
+  result=$?
+  [ "$result" -eq 3 ] && exit 0
+  exit "$result"
+ }
+ if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload
+  if command -v deb-systemd-helper >/dev/null; then deb-systemd-helper enable tastedev-linux.service >/dev/null; fi
+  if command -v deb-systemd-invoke >/dev/null; then deb-systemd-invoke restart tastedev-linux.service; fi
+ fi
+fi

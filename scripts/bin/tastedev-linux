@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in
+ service)
+  [ "${2:-}" = setup ] && [ "$#" -eq 3 ] || { echo "사용법: sudo tastedev-linux service setup USERNAME" >&2; exit 2; }
+  exec /usr/bin/node /usr/lib/tastedev-linux/scripts/configure-service-account.mjs --setup "$3"
+  ;;
+ account)
+  [ "${2:-}" = setup ] || { echo '사용법: tastedev-linux account setup [--replace]' >&2; exit 2; }
+  shift 2
+  [ "$#" -eq 0 ] || { [ "$#" -eq 1 ] && [ "$1" = --replace ]; } || { echo '계정 재설정 옵션은 --replace만 사용할 수 있습니다.' >&2; exit 2; }
+  [ "$(id -u)" -eq 0 ] || { echo 'sudo를 붙여 실행하세요: sudo tastedev-linux account setup' >&2; exit 1; }
+  exec /usr/bin/node /usr/lib/tastedev-linux/scripts/configure-service-account.mjs --account "$@"
+  ;;
+ *) echo '사용법: sudo tastedev-linux account setup [--replace]' >&2; exit 2;;
+esac

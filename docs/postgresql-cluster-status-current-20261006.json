@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-06",
+  "relatedTestsPassed": 21,
+  "relatedTestsFailed": 0,
+  "browser": {
+    "route": "http://127.0.0.1:8787/ide/packages/postgresql",
+    "initialParentState": "active · exited",
+    "selectedPath": "/etc/postgresql/18/main/postgresql.conf",
+    "selectedUnit": "postgresql@18-main.service",
+    "selectedStatus": "실행 중",
+    "rootOverflow": "hidden",
+    "bodyOverflow": "hidden",
+    "settingsOverflow": "auto",
+    "screenshot": "/tmp/tastedev-pg-cluster-status.jpg"
+  },
+  "sourceSha256": {
+    "lib/postgresql-cluster-status.mjs": "7cc19f55c0e4b74329a9f308c85069144971b11a76bc7428a95598c5e1d8499b",
+    "lib/config-live.mjs": "0511d75715514accebe525dd503283a929b3502ef65382328fee4df7b7402873",
+    "components/package-config-ide.jsx": "7755853617540afdd6a98c1a51d0f37e7030458dd08415164620690fc010160e",
+    "app/globals.css": "f01b9a4bb2899061a18872686404fcf6f3c98c6dc3309fe26c716611a2899b93"
+  },
+  "remoteCurrentSourceExecution": "not performed; awaiting explicit source transmission approval",
+  "serviceControlScope": "existing postgresql.service with explicit tooltip and confirmation",
+  "postgresqlClusterControlImplemented": false,
+  "productionBuildUpdatedAfterThisChange": false,
+  "hostServiceChanges": false
+}

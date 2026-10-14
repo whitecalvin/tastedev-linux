@@ -1,0 +1,53 @@
+import type {Server,Socket} from 'node:net';
+import type {ChildProcessWithoutNullStreams} from 'node:child_process';
+import type {PostgresqlConfigCandidate} from '../lib/postgresql-config-candidate.ts';
+import {verificationWorkDirectory,verificationWorkRoot} from './verification/work-directory.ts';
+import {adminRuntimeFiles} from './admin/runtime-files.mts';
+import {readRuntimeModule} from './runtime-source.ts';
+import {jsonRecord,textField} from './verification/http-json.ts';
+import {diagnostic} from './verification/nginx-native-report.ts';
+import {hasErrorCode} from '../lib/error-code.ts';
+import {inspectPostgresqlOriginalConfiguration} from '../lib/postgresql-original-config-validation.ts';
+import {readPostgresqlGraphRestoreJournal} from '../lib/postgresql-graph-restore-journal.ts';
+import assert from 'node:assert/strict';
+import {mkdir,writeFile,readFile,cp,rm,lstat,readlink} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
+import {createServer} from 'node:net';
+import {createHash} from 'node:crypto';
+import path from 'node:path';
+import {readPostgresqlGraphArchive} from '../lib/postgresql-graph-archive.ts';
+import {inspectPostgresqlGraphArchive} from '../lib/postgresql-archive-candidate.ts';
+import {inspectPostgresqlConfiguration} from '../lib/postgresql-config-inspect.ts';
+import {inspectPostgresqlConfigCandidate} from '../lib/postgresql-config-validation.ts';
+import {validationIdentityBinary} from '../lib/validation-identity-binary.ts';
+const args=process.argv.slice(2),major=args[0]||'18';
+assert(args.length<=1&&/^[1-9][0-9]$/.test(major)&&Number(major)>=15);assert(process.getuid&&process.getgid);const uid=process.getuid(),gid=process.getgid();assert.notEqual(uid,0);
+const binaries=['/usr/bin/bwrap','/usr/bin/prlimit','/usr/bin/id','/usr/lib/postgresql/'+major+'/bin/postgres','/usr/lib/postgresql/'+major+'/bin/psql','/usr/lib/postgresql/'+major+'/bin/initdb'].map(binary=>validationIdentityBinary({binary}));
+const base=await verificationWorkDirectory('tastedev-pg-runtime-'),initial=await lstat(base);let report:Record<string,unknown>|undefined,evidence:string|undefined,server:Server|undefined;const connections=new Set<Socket>();
+const worker='scripts/verify-postgresql-runtime-worker.mjs',runtimeFiles=[...adminRuntimeFiles.map(name=>'lib/'+name),worker,'scripts/verification/http-json.mjs'];
+const app=verificationWorkRoot+'/app',bridge=verificationWorkRoot+'/bridge',output=verificationWorkRoot+'/evidence',backups=verificationWorkRoot+'/backups';
+try{
+ for(const name of ['app','data','socket','evidence','backups','bridge'])await mkdir(path.join(base,name),{mode:0o700});
+ await mkdir(path.join(base,'postgresql',major,'fixture'),{recursive:true,mode:0o700});
+ for(const name of runtimeFiles){const target=path.join(base,'app',name);await mkdir(path.dirname(target),{recursive:true,mode:0o700});await writeFile(target,await readRuntimeModule(name,runtimeFiles),{mode:0o600});}await writeFile(path.join(base,'app/package.json'),JSON.stringify({type:'module'}),{mode:0o600});
+ await writeFile(path.join(base,'app/binaries.json'),JSON.stringify(Object.fromEntries(binaries.map(row=>[row.path,row.sha256]))),{mode:0o600});
+ await writeFile(path.join(base,'app/namespace.json'),JSON.stringify({major:Number(major),uid,gid,pidNamespace:await readlink('/proc/self/ns/pid'),networkNamespace:await readlink('/proc/self/ns/net')}),{mode:0o600});
+ const command=['--unshare-user','--uid',String(uid),'--gid',String(gid),'--unshare-net','--unshare-pid','--die-with-parent','--new-session','--ro-bind','/usr','/usr','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/bin','/bin','--proc','/proc','--dev','/dev','--dir','/mnt','--dir','/mnt/data','--dir','/mnt/data/build','--tmpfs',verificationWorkRoot,'--tmpfs','/run','--dir','/run/postgresql','--bind',path.join(base,'socket'),'/run/postgresql/fixture','--dir','/var','--dir','/var/lib','--dir','/var/lib/postgresql','--dir','/var/lib/postgresql/'+major,'--bind',path.join(base,'data'),'/var/lib/postgresql/'+major+'/fixture','--dir','/etc','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--dir','/etc/postgresql','--dir','/etc/postgresql/'+major,'--bind',path.join(base,'postgresql',major,'fixture'),'/etc/postgresql/'+major+'/fixture','--ro-bind',path.join(base,'app'),app,'--bind',path.join(base,'evidence'),output,'--bind',path.join(base,'bridge'),bridge,'--bind',path.join(base,'backups'),backups,'--ro-bind',process.execPath,'/node','--chdir',app,'--setenv','PATH','/usr/bin:/bin','--setenv','TMPDIR',verificationWorkRoot,'--setenv','TMP',verificationWorkRoot,'--setenv','TEMP',verificationWorkRoot,'/node',app+'/'+worker,major];
+ try{
+  let child:ChildProcessWithoutNullStreams|undefined,stderr='',chain=Promise.resolve(),timedOut=false;
+  server=createServer(channel=>{connections.add(channel);channel.on('close',()=>connections.delete(channel));channel.on('error',()=>child?.kill('SIGTERM'));let requests='';
+  channel.on('data',bytes=>{requests+=bytes.toString('utf8');if(requests.length>300000){child?.kill('SIGTERM');return;}let at;while((at=requests.indexOf('\n'))>=0){const line=requests.slice(0,at);requests=requests.slice(at+1);chain=chain.then(async()=>{const request=jsonRecord(JSON.parse(line));const type=textField(request,'type'),id=textField(request,'id'),target=textField(request,'target');assert(['validate','validateArchive','validateOriginal'].includes(type));assert.deepEqual(Object.keys(request).sort(),type==='validate'?['id','target','text','type']:type==='validateOriginal'?['id','target','type']:['id','reference','target','type']);assert.match(id,/^[a-f0-9-]{36}$/);assert.equal(target,'/etc/postgresql/'+major+'/fixture/postgresql.conf');if(type==='validate'){assert.equal(typeof request.text,'string');assert(Buffer.byteLength(textField(request,'text'))<=262144);}try{const options={validationUid:uid,validationGid:gid,validate:(candidate:PostgresqlConfigCandidate)=>inspectPostgresqlConfigCandidate(candidate,{validationUid:uid,validationGid:gid})};const report=type==='validateOriginal'?await inspectPostgresqlOriginalConfiguration(await readPostgresqlGraphRestoreJournal(target,path.join(base,'backups'),{ownerUid:uid}),path.join(base,'backups'),options):type==='validate'?await inspectPostgresqlConfiguration(target,{base,ownerUid:uid,overrides:new Map([[target,textField(request,'text')]]),...options}):await inspectPostgresqlGraphArchive(await readPostgresqlGraphArchive(request.reference,path.join(base,'backups'),target),options);channel.write(JSON.stringify({id:id,result:report})+'\n');}catch(error){await writeFile(path.join(base,'evidence/host-validation.stderr'),diagnostic(error),{mode:0o600});channel.write(JSON.stringify({id:id,error:'Private native validation failed'})+'\n');}}).catch(error=>{stderr+=diagnostic(error);child?.kill('SIGTERM');});}});
+  });
+  await new Promise<void>((resolve,reject)=>{assert(server);server.once('error',reject);server.listen(path.join(base,'bridge/validation.sock'),resolve);});
+  child=spawn('/usr/bin/bwrap',command,{env:{NODE_ENV:'test',PATH:'/usr/bin:/bin',LANG:'C',LC_ALL:'C',TMPDIR:verificationWorkRoot,TMP:verificationWorkRoot,TEMP:verificationWorkRoot},stdio:['pipe','pipe','pipe']});
+  child.stdout.on('data',()=>{});child.stderr.on('data',bytes=>{stderr+=bytes.toString('utf8');if(stderr.length>65536)child?.kill('SIGTERM');});
+  const timer=setTimeout(()=>{timedOut=true;child?.kill('SIGTERM');},60000);const code=await new Promise<number|null>((resolve,reject)=>{assert(child);child.once('error',reject);child.once('close',resolve);});clearTimeout(timer);await chain;assert.equal(timedOut,false);if(code!==0)throw Object.assign(Error('Private namespace worker failed'),{stderr});
+ }catch(error){const evidence=await verificationWorkDirectory('postgresql-runtime-failure-');await cp(path.join(base,'evidence'),evidence,{recursive:true});await writeFile(path.join(evidence,'worker.stderr'),error!==null&&typeof error==='object'&&'stderr' in error?String(error.stderr):diagnostic(error),{mode:0o600});throw Error('Private PostgreSQL runtime verification failed; diagnostic fixture retained at '+evidence);}
+ const record=jsonRecord(JSON.parse(await readFile(path.join(base,'evidence/runtime.json'),'utf8')));assert.equal(record.status,'PASS');assert.equal(record.operatingServiceChanged,false);assert.equal(record.systemdManager,'fixture-only');
+ assert.deepEqual(binaries,binaries.map(({path:binary})=>validationIdentityBinary({binary})));
+ const sourceSha256:Record<string,string>={};for(const file of ['lib/postgresql-graph-restore-stages.ts','lib/postgresql-code-restore.ts','lib/postgresql-reviewed-graph-restore.ts','lib/postgresql-graph-swap.ts','lib/postgresql-graph-swap-recovery.ts','lib/postgresql-graph-swap-progress.ts','lib/postgresql-hba-service.ts','lib/postgresql-config-service.ts','lib/postgresql-code-operation.ts','lib/config-transaction.ts','lib/postgresql-config-validation.ts','scripts/verify-postgresql-runtime-host.ts','scripts/verify-postgresql-runtime-worker.ts'])sourceSha256[file]=createHash('sha256').update(await readFile(file)).digest('hex');
+ evidence=path.join(verificationWorkRoot,'postgresql-runtime-host-'+new Date().toISOString().replaceAll(':','-')+'.json');await mkdir(path.dirname(evidence),{recursive:true,mode:0o700});report={...record,binaries,sourceSha256,isolatedNetwork:true,isolatedPidNamespace:true,installed:false};
+}finally{for(const connection of connections)connection.destroy();if(server?.listening)await new Promise<void>(resolve=>server?.close(()=>resolve()));const now=await lstat(base);assert.equal(now.dev,initial.dev);assert.equal(now.ino,initial.ino);await rm(base,{recursive:true,force:true});}
+await assert.rejects(lstat(base),error=>hasErrorCode(error,'ENOENT'));
+assert(evidence&&report);await writeFile(evidence,JSON.stringify({...report,privateFixtureCleanupVerified:true},null,2)+'\n',{mode:0o600,flag:'wx'});
+console.log(JSON.stringify({status:'PASS',checks:Array.isArray(report.checks)?report.checks.length:0,evidence,realPostmasterStarted:true,systemdManager:'fixture-only',operatingServiceChanged:false,privateFixtureCleanupVerified:true}));
