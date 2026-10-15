@@ -240,3 +240,8 @@ body .nginx-tree-panel .nginx-file-summary--add > .nginx-node-add { position: ab
  .installed-sidebar-resizer{display:block;position:fixed;inset-inline-start:calc(48px + var(--installed-sidebar-width,232px) - 2px);top:56px;bottom:26px;width:5px;z-index:25}
  .installed-sidebar-resizer[data-resizing=true]::before{margin-inline:0;background:var(--accent)}
 }
+
+/* Keep the security save icon and label centered as a single group. */
+.console-shell .security-save-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+.console-shell .security-save-button svg{width:16px;height:16px;flex:0 0 16px}
+.console-shell .security-save-button span{flex:0 0 auto;text-align:center}

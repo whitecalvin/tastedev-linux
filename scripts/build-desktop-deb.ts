@@ -31,6 +31,8 @@ try{
  await copyFile(binary,path.join(root,'usr/bin/tastedev-linux-desktop'));await chmod(path.join(root,'usr/bin/tastedev-linux-desktop'),0o755);
  await copyFile('packaging/tastedev-linux-desktop.desktop',path.join(root,'usr/share/applications/tastedev-linux.desktop'));await chmod(path.join(root,'usr/share/applications/tastedev-linux.desktop'),0o644);
  await copyFile('src-tauri/icons/icon.png',path.join(root,iconDirectory,'tastedev-linux.png'));await chmod(path.join(root,iconDirectory,'tastedev-linux.png'),0o644);
+ await mkdir(path.join(root,'usr/share/icons/hicolor/scalable/apps'),{recursive:true,mode:0o755});
+ await copyFile('src-tauri/icons/icon.svg',path.join(root,'usr/share/icons/hicolor/scalable/apps/tastedev-linux.svg'));await chmod(path.join(root,'usr/share/icons/hicolor/scalable/apps/tastedev-linux.svg'),0o644);
  await writeFile(path.join(root,'DEBIAN/control'),`Package: tastedev-linux-desktop\nVersion: ${version}\nArchitecture: ${architecture}\nMaintainer: GXSOFT\nDepends: ${[...dependencies].sort().join(', ')}\nSection: admin\nPriority: optional\nDescription: Tastedev Linux Tauri desktop console\n Native desktop window for the local Tastedev Linux server.\n`,{mode:0o644});
  const file=path.join(artifact,`tastedev-linux-desktop_${version}_${architecture}.deb`);await exec('/usr/bin/dpkg-deb',['--root-owner-group','--build',root,file]);
  const sha256=createHash('sha256').update(await readFile(file)).digest('hex');await writeFile(file+'.sha256',sha256+'  '+path.basename(file)+'\n');console.log(JSON.stringify({package:file,sha256,dependencies:[...dependencies],installed:false}));

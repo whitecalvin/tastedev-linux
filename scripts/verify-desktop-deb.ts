@@ -23,6 +23,7 @@ try{
  const binarySha256=createHash('sha256').update(packagedBinary).digest('hex');
  const elf=(await exec('/usr/bin/readelf',['-h',binary])).stdout;assert(elf.includes('ELF64'));assert(elf.includes(process.arch==='x64'?'X86-64':'AArch64'));
  const iconSource=await readFile('src-tauri/icons/icon.png'),size=iconSource.readUInt32BE(16);assert.deepEqual(await readFile(path.join(root,`usr/share/icons/hicolor/${size}x${size}/apps/tastedev-linux.png`)),iconSource);
+ assert.deepEqual(await readFile(path.join(root,'usr/share/icons/hicolor/scalable/apps/tastedev-linux.svg')),await readFile('src-tauri/icons/icon.svg'));
  const sha256=createHash('sha256').update(await readFile(file)).digest('hex');assert((await readFile(file+'.sha256','utf8')).startsWith(sha256));
  const result={status:'PASS',package:path.basename(file),sha256,binarySha256,installed:false,guiLaunched:false,checks:['current release binary identity','package metadata','server dependency','desktop entry validation','ELF architecture','runtime shared libraries','file permissions','icon','checksum']};
  const evidence=path.join(buildWorkspace,'desktop-package-verification-'+new Date().toISOString().replaceAll(':','-')+'.json');await writeFile(evidence,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));
