@@ -1,3 +1,4 @@
+import {sessionCookieName} from '../lib/auth.ts';
 import test, { beforeEach } from 'node:test';
 beforeEach(() => globalThis.__linuxLoginAttempts.clear());
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ test('login uses hashed password, revocable cookie and ignores legacy bearer', a
   process.env.LINUX_LOGIN_PASSWORD_HASH = await passwordHash('test-login-password');
   await assert.rejects(login('test-admin', 'incorrect'), (e) => e.status === 401);
   const id = await login('test-admin', 'test-login-password');
-  const request = new Request('http://localhost/api/status', { headers: { Cookie: 'linux_session=' + id } });
+  const request = new Request('http://localhost/api/status', { headers: { Cookie: sessionCookieName() + '=' + id } });
   assert.equal((await cookieSession(request)).username, 'test-admin');
   assert.equal(await authorized(request), true);
   assert.match(sessionCookie(request, id), /HttpOnly; SameSite=Strict/);
@@ -23,7 +24,7 @@ test('login uses hashed password, revocable cookie and ignores legacy bearer', a
     false,
   );
   const next = await login('test-admin', 'test-login-password');
-  const second = new Request('http://localhost', { headers: { Cookie: 'linux_session=' + next } });
+  const second = new Request('http://localhost', { headers: { Cookie: sessionCookieName() + '=' + next } });
   await logoutSession(second);
   assert.equal(await cookieSession(second), null);
 });
@@ -40,7 +41,7 @@ test('password changes persist securely and revoke every old session', async () 
     process.env.LINUX_LOGIN_PASSWORD_HASH = await passwordHash('old-fixture-password');
     const first = await login('test-admin', 'old-fixture-password'),
       second = await login('test-admin', 'old-fixture-password');
-    const request = (id) => new Request('http://localhost', { headers: { Cookie: 'linux_session=' + id } });
+    const request = (id) => new Request('http://localhost', { headers: { Cookie: sessionCookieName() + '=' + id } });
     await assert.rejects(changePassword(request(first), 'wrong', 'new-fixture-password'), (e) => e.status === 401 && e.code !== 'SESSION_EXPIRED');
     assert(await cookieSession(request(first)));
     await changePassword(request(first), 'old-fixture-password', 'new-fixture-password');

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {login,passwordHash,cookieSession,sessionCookie,logoutSession} from '../lib/auth.ts';
+import {login,passwordHash,cookieSession,sessionCookie,logoutSession,sessionCookieName} from '../lib/auth.ts';
 import {getBetterAuth} from '../lib/better-auth.ts';
 import {GET} from '../app/api/auth/[operation]/route.ts';
 test('secure-cookie configuration signs in, renews and revokes the Better Auth secure-prefixed cookie',async()=>{
@@ -13,11 +13,11 @@ test('secure-cookie configuration signs in, renews and revokes the Better Auth s
   process.env.LINUX_AUTH_ROOT=root;process.env.LINUX_COOKIE_SECURE='true';process.env.BETTER_AUTH_URL='https://fixture.invalid';process.env.LINUX_LOGIN_USERNAME='secure-fixture';process.env.LINUX_LOGIN_PASSWORD_HASH=await passwordHash('secure-fixture-password');
   const token=await login('secure-fixture','secure-fixture-password');({db}=await getBetterAuth());
   const baseRequest=new Request('https://fixture.invalid/api/auth/status');
-  const cookie=sessionCookie(baseRequest,token);assert.match(cookie,/^__Secure-linux_session=/);assert.match(cookie,/; Secure$/);
+  const cookie=sessionCookie(baseRequest,token);assert(cookie.startsWith(sessionCookieName()+'='));assert.match(cookie,/; Secure$/);
   const request=new Request(baseRequest.url,{headers:{cookie:cookie.split(';')[0]}});
   assert.equal((await cookieSession(request)).username,'secure-fixture');
-  const response=await GET(request,{params:Promise.resolve({operation:'status'})});assert.equal((await response.json()).authenticated,true);assert.match(response.headers.get('set-cookie'),/^__Secure-linux_session=/);
-  await logoutSession(request);assert.equal(await cookieSession(request),null);assert.match(sessionCookie(baseRequest),/^__Secure-linux_session=;.*Max-Age=0; Secure$/);
+  const response=await GET(request,{params:Promise.resolve({operation:'status'})});assert.equal((await response.json()).authenticated,true);assert(response.headers.get('set-cookie').startsWith(sessionCookieName()+'='));
+  await logoutSession(request);assert.equal(await cookieSession(request),null);assert(sessionCookie(baseRequest).startsWith(sessionCookieName()+'=;'));assert.match(sessionCookie(baseRequest),/Max-Age=0; Secure$/);
  }finally{
   if(!db){try{({db}=await getBetterAuth());}catch{}}
   db?.close();for(const key of keys)if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];await rm(root,{recursive:true,force:true});

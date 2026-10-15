@@ -18,6 +18,20 @@ function privateFile(path: string) {
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.mode & 0o077)
     throw Error('인증 저장 파일 권한을 확인하세요.');
 }
+// Browser cookies are scoped by host, not port. Each installation needs its own name.
+export function sessionCookieBaseName() {
+  const file = join(resolve(process.env.LINUX_AUTH_ROOT || stateRoot()), 'better-auth', 'secret');
+  try {
+    privateFile(file);
+    const secret = readFileSync(file, 'utf8');
+    if (!/^[0-9a-f]{96}$/.test(secret)) throw Error('인증 키를 확인하세요.');
+    return 'linux_session_' + createHash('sha256').update('session-cookie:' + secret).digest('hex').slice(0, 20);
+  } catch (error) {
+    // Before account initialization there is no session to isolate.
+    if (hasErrorCode(error, 'ENOENT')) return 'linux_session';
+    throw error;
+  }
+}
 async function initialize(root: string) {
   const base = join(root, 'better-auth');
   mkdirSync(root, { recursive: true, mode: 0o700 });
@@ -63,7 +77,7 @@ async function initialize(root: string) {
     advanced: {
       useSecureCookies: process.env.LINUX_COOKIE_SECURE === 'true',
       defaultCookieAttributes: { sameSite: 'strict', httpOnly: true },
-      cookies: { session_token: { name: 'linux_session' } },
+      cookies: { session_token: { name: sessionCookieBaseName() } },
     },
     plugins: [
       username({

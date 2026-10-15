@@ -45,7 +45,7 @@ const {createServer}=await import('node:http');
 const {handle}=await import('../../lib/api.ts');
 const {defaultSecurity}=await import('../../lib/security.ts');
 const {storeCredentials}=await import('../../lib/auth-store.ts');
-const {login,passwordHash}=await import('../../lib/auth.ts');
+const {login,passwordHash,sessionCookieName}=await import('../../lib/auth.ts');
 const password=(await import('node:crypto')).randomBytes(24).toString('hex');
 storeCredentials('cron-fixture',await passwordHash(password));if(guiMode)fs.writeFileSync('/mnt/data/build/tastedev-linux/cron-evidence/gui-login.json',JSON.stringify({username:'cron-fixture',password}),{mode:0o600});
 let cookie='';
@@ -57,9 +57,9 @@ if(nextMode){
  const {createServer:reservePort}=await import('node:net');const reservation=reservePort();await new Promise<void>(resolve=>reservation.listen(0,'127.0.0.1',resolve));const address=reservation.address();assert(address&&typeof address==='object');const port=address.port;await new Promise<void>(resolve=>reservation.close(()=>resolve()));base='http://127.0.0.1:'+port;
  process.env.BETTER_AUTH_URL=base;nextProcess=spawn(process.execPath,['/mnt/data/build/tastedev-linux/cron-source/node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{cwd:'/mnt/data/build/tastedev-linux/cron-build',env:{...process.env,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','pipe']});assert(nextProcess.stdout&&nextProcess.stderr);nextProcess.stdout.on('data',chunk=>nextLog=(nextLog+chunk).slice(-8000));nextProcess.stderr.on('data',chunk=>nextLog=(nextLog+chunk).slice(-8000));
  let ready=false;for(let i=0;i<100;i++){if(nextProcess?.exitCode!==null)throw Error('Next.js fixture exited: '+nextLog);try{if((await fetch(base+'/login',{signal:AbortSignal.timeout(1000)})).status===200){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,100));}assert(ready,'Next.js fixture readiness timeout: '+nextLog);
- const response=await fetch(base+'/api/auth/login',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({username:'cron-fixture',password})});assert.equal(response.status,200);const setCookie=response.headers.get('set-cookie');assert(setCookie);cookie=setCookie.split(';')[0];assert(cookie.startsWith('linux_session='));checks.push('compiled Next.js login creates real Better Auth session');
+ const response=await fetch(base+'/api/auth/login',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({username:'cron-fixture',password})});assert.equal(response.status,200);const setCookie=response.headers.get('set-cookie');assert(setCookie);cookie=setCookie.split(';')[0];assert.match(cookie,/^linux_session_[a-f0-9]{20}=/);checks.push('compiled Next.js login creates real Better Auth session');
 }else{
- cookie='linux_session='+await login('cron-fixture',password);
+ {const token=await login('cron-fixture',password);cookie=sessionCookieName()+'='+token;};
 server=createServer(async(req,res)=>{try{
  const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk));const headers=new Headers();for(const [name,value]of Object.entries(req.headers)){for(const item of Array.isArray(value)?value:[value])if(typeof item==='string')headers.append(name,item);}
  const url=base+req.url,request=new Request(url,{method:req.method,headers,...(req.method==='GET'?{}:{body:Uint8Array.from(Buffer.concat(chunks))})});

@@ -2,7 +2,7 @@ type LoginAttempt = {count: number; start: number};
 declare global {var __linuxLoginAttempts: Map<string,LoginAttempt> | undefined;}
 type AuthRequest = {headers: Headers};
 import { credentials, storeCredentials } from './auth-store.ts';
-import { getBetterAuth } from './better-auth.ts';
+import { getBetterAuth, sessionCookieBaseName } from './better-auth.ts';
 import { passwordHash, verifyPassword } from './auth-password.ts';
 export { passwordHash };
 const attempts = (globalThis.__linuxLoginAttempts ??= new Map<string,LoginAttempt>());
@@ -12,7 +12,7 @@ export function loginConfigured() {
   return Boolean(data.username && /^scrypt\$[0-9a-f]{32}\$[0-9a-f]{128}$/.test(data.passwordHash || ''));
 }
 export function sessionCookieName() {
-  return process.env.LINUX_COOKIE_SECURE === 'true' ? '__Secure-linux_session' : 'linux_session';
+  return (process.env.LINUX_COOKIE_SECURE === 'true' ? '__Secure-' : '') + sessionCookieBaseName();
 }
 export function sessionToken(request: AuthRequest) {
   const prefix = sessionCookieName() + '=';

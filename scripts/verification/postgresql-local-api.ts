@@ -84,7 +84,9 @@ export async function postgresqlLocalApi(root:string, dispatch:(action:string,da
     // path. Keep the plaintext password transient and never publish it.
     const password = randomBytes(24).toString('hex');
     storeCredentials('pg-fixture', await passwordHash(password));
-    const cookie = 'linux_session=' + (await login('pg-fixture', password));
+    const token = await login('pg-fixture', password);
+    const {sessionCookieName}=await import('../../lib/auth.ts');
+    const cookie = sessionCookieName() + '=' + token;
     const post = async (action:string, data:unknown, headers:Record<string,string> = {}) => {
       const response = await fetch(base + '/api/' + action, {
         method: 'POST',

@@ -127,7 +127,7 @@ try {
   });
   assert.equal(auth.status, 200);
   let cookie = cookieValue(auth).split(';')[0];
-  assert(cookie.startsWith('linux_session='));
+  assert.match(cookie,/^linux_session_[a-f0-9]{20}=/);
   assert(cookieValue(auth).includes('HttpOnly'));
   assert(cookieValue(auth).includes('SameSite=Strict'));
   checks.push('Better Auth login issues private same-site session cookie');

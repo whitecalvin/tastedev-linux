@@ -1,3 +1,4 @@
+import {sessionCookieName} from '../lib/auth.ts';
 import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { commandFor, startInstall } from '../lib/packages.ts';
@@ -14,7 +15,7 @@ beforeEach(async () => {
 function request(body, extra = {}) {
   return new Request('http://localhost:8787/api/plan', {
     method: 'POST',
-    headers: { Cookie: 'linux_session=' + session, 'Content-Type': 'application/json', ...extra },
+    headers: { Cookie: sessionCookieName() + '=' + session, 'Content-Type': 'application/json', ...extra },
     body: JSON.stringify(body),
   });
 }
@@ -298,7 +299,7 @@ test('Installed Node service settings require login and sudo inspection permissi
     (
       await handle(
         new Request('http://localhost/api/node-app-service-settings?id=fixture', {
-          headers: { Cookie: 'linux_session=' + session },
+          headers: { Cookie: sessionCookieName() + '=' + session },
         }),
         'node-app-service-settings',
       )
@@ -338,7 +339,7 @@ test('Node service backup API requires login and sudo inspection permission', as
     (
       await handle(
         new Request('http://localhost/api/node-app-service-backups?id=fixture', {
-          headers: { Cookie: 'linux_session=' + session },
+          headers: { Cookie: sessionCookieName() + '=' + session },
         }),
         'node-app-service-backups',
       )
@@ -361,7 +362,7 @@ test('Node service restoration review API requires login and sudo inspection per
     (
       await handle(
         new Request('http://localhost/api/node-app-service-restore-plan?id=fixture', {
-          headers: { Cookie: 'linux_session=' + session },
+          headers: { Cookie: sessionCookieName() + '=' + session },
         }),
         'node-app-service-restore-plan',
       )
@@ -420,7 +421,7 @@ test('sudo policy preview API requires login and same origin but does not apply 
     401,
   );
   const list = await handle(
-    new Request('http://localhost/api/sudo-policy-actions', { headers: { Cookie: 'linux_session=' + session } }),
+    new Request('http://localhost/api/sudo-policy-actions', { headers: { Cookie: sessionCookieName() + '=' + session } }),
     'sudo-policy-actions',
   );
   assert.equal(list.status, 200);
@@ -435,7 +436,7 @@ test('sudo current-rule API requires authentication and sudo inspection setting'
   assert.equal(
     (
       await handle(
-        new Request('http://localhost/api/sudo-policy-settings', { headers: { Cookie: 'linux_session=' + session } }),
+        new Request('http://localhost/api/sudo-policy-settings', { headers: { Cookie: sessionCookieName() + '=' + session } }),
         'sudo-policy-settings',
       )
     ).status,
@@ -507,7 +508,7 @@ test('sudo rule update stays denied when only service permission is saved', asyn
 test('nginx context lookup requires login and sudo policy permission before invoking helper', async () => {
   assert.equal((await handle(new Request('http://localhost/api/nginx-context'), 'nginx-context')).status, 401);
   const response = await handle(
-    new Request('http://localhost/api/nginx-context', { headers: { Cookie: 'linux_session=' + session } }),
+    new Request('http://localhost/api/nginx-context', { headers: { Cookie: sessionCookieName() + '=' + session } }),
     'nginx-context',
   );
   assert.equal(response.status, 403);
@@ -542,7 +543,7 @@ test('nginx backup APIs require authentication and restore is gated before readi
   assert.equal(
     (
       await handle(
-        new Request('http://localhost/api/nginx-config-backups', { headers: { Cookie: 'linux_session=' + session } }),
+        new Request('http://localhost/api/nginx-config-backups', { headers: { Cookie: sessionCookieName() + '=' + session } }),
         'nginx-config-backups',
       )
     ).status,
@@ -595,7 +596,7 @@ test('Redis context lookup requires login and sudo permission before helper obse
   assert.equal(
     (
       await handle(
-        new Request('http://localhost/api/redis-context', { headers: { Cookie: 'linux_session=' + session } }),
+        new Request('http://localhost/api/redis-context', { headers: { Cookie: sessionCookieName() + '=' + session } }),
         'redis-context',
       )
     ).status,
@@ -644,7 +645,7 @@ test('HBA backup endpoints require authentication, explicit sudo read permission
     const url = 'http://localhost/api/' + action + '?path=' + encodeURIComponent('/etc/postgresql/18/main/pg_hba.conf');
     assert.equal((await handle(new Request(url), action)).status, 401);
     assert.equal(
-      (await handle(new Request(url, { headers: { Cookie: 'linux_session=' + session } }), action)).status,
+      (await handle(new Request(url, { headers: { Cookie: sessionCookieName() + '=' + session } }), action)).status,
       403,
     );
   }
@@ -690,7 +691,7 @@ test('Node interrupted service recovery requires authenticated sudo inspection a
     (
       await handle(
         new Request('http://localhost/api/' + review + '?id=fixture', {
-          headers: { Cookie: 'linux_session=' + session },
+          headers: { Cookie: sessionCookieName() + '=' + session },
         }),
         review,
       )
@@ -721,7 +722,7 @@ test('Redis interrupted recovery API gates login, same origin and database chang
   assert.equal(
     (
       await handle(
-        new Request('http://localhost/api/' + review, { headers: { Cookie: 'linux_session=' + session } }),
+        new Request('http://localhost/api/' + review, { headers: { Cookie: sessionCookieName() + '=' + session } }),
         review,
       )
     ).status,
@@ -750,7 +751,7 @@ test('nginx interrupted recovery API requires login, same-origin changes and sud
   assert.equal((await handle(request({ confirm: true }), action)).status, 403);
   assert.equal((await handle(new Request(url), review)).status, 401);
   assert.equal(
-    (await handle(new Request(url, { headers: { Cookie: 'linux_session=' + session } }), review)).status,
+    (await handle(new Request(url, { headers: { Cookie: sessionCookieName() + '=' + session } }), review)).status,
     403,
   );
 });
@@ -777,7 +778,7 @@ test('MariaDB interrupted recovery gates login, same origin, database permission
   assert.equal((await handle(request({ confirm: true }), action)).status, 403);
   assert.equal((await handle(new Request(url), review)).status, 401);
   assert.equal(
-    (await handle(new Request(url, { headers: { Cookie: 'linux_session=' + session } }), review)).status,
+    (await handle(new Request(url, { headers: { Cookie: sessionCookieName() + '=' + session } }), review)).status,
     403,
   );
 });

@@ -1,3 +1,4 @@
+import {sessionCookieName} from '../lib/auth.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -13,7 +14,7 @@ test('authenticated status refreshes an aged Better Auth session and private bro
  try{
   process.env.LINUX_AUTH_ROOT=root;process.env.LINUX_LOGIN_USERNAME='renewal-fixture';process.env.LINUX_LOGIN_PASSWORD_HASH=await passwordHash('renewal-fixture-password');
   const token=await login('renewal-fixture','renewal-fixture-password');
-  const request=new Request('http://localhost/api/auth/status',{headers:{cookie:'linux_session='+token}});
+  const request=new Request('http://localhost/api/auth/status',{headers:{cookie:sessionCookieName()+'='+token}});
   ({db}=await getBetterAuth());
   const before=Date.now()-25*3600000;
   db.prepare('UPDATE session SET createdAt=?,updatedAt=?,expiresAt=?').run(before,before,before+7*86400000);

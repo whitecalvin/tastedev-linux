@@ -1,6 +1,7 @@
 'use client';
 import {useRef,useState} from 'react';
 import {ToastNotice,useFeedback} from '../../components/ui/toast-provider';
+import InstalledSidebar from '../../components/ui/installed-sidebar';
 import type {ToastKind} from '../../components/ui/toast';
 
 // Public synthetic UI fixture: no requests, credentials or operating actions.
@@ -8,7 +9,7 @@ export default function ToastFixture(){
  const [message,setMessage,kind,eventId]=useFeedback<string>('');
  const [popupMessage,setPopupMessage,popupKind,popupEvent]=useFeedback<string>('');
  const [page,setPage]=useState(true),dialog=useRef<HTMLDialogElement>(null);
- return <div className="console-shell"><aside className="admin-sidebar"><div className="sidebar-title">설치된 패키지</div><nav><button type="button" className="active" title="nodejs 22.22.1+dfsg+~cs22.19.15-1ubuntu1">Node.js<small> · 22.22.1+dfsg+~cs22.19.15-1ubuntu1</small></button></nav></aside><main style={{padding:40,marginLeft:280}}>
+ return <div className="console-shell"><InstalledSidebar><div className="sidebar-title">설치된 패키지</div><nav><button type="button" className="active" title="nodejs 22.22.1+dfsg+~cs22.19.15-1ubuntu1">Node.js<small> · 22.22.1+dfsg+~cs22.19.15-1ubuntu1</small></button></nav></InstalledSidebar><main className="admin-content" style={{padding:40}}>
   <h1>공통 토스트 검수</h1>
   {(['success','info','warning','error'] as ToastKind[]).map(type=><button type="button" key={type} onClick={()=>{setPage(true);setMessage(type==='success'?'보안 옵션 저장 완료':type+' · 공통 토스트 검수',type);}}>{type}</button>)}
   <button type="button" onClick={()=>dialog.current?.showModal()}>팝업 열기</button>

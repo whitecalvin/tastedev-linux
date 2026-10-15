@@ -132,7 +132,7 @@ export async function verifyPackageServer(app:string, root:string, { terminal = 
     });
     assert.equal(signIn.status, 200);
     let cookie = signIn.headers.get('set-cookie')?.split(';')[0]??'';
-    assert(cookie?.startsWith('linux_session='));
+    assert.match(cookie??'',/^linux_session_[a-f0-9]{20}=/);
     const authGet = (route:string) =>
       packageFetch(base + route, { headers: { Cookie: cookie }, redirect: 'manual', signal: AbortSignal.timeout(5000) });
     const post = (route:string, body:unknown) =>
@@ -1008,7 +1008,7 @@ export async function verifyPackageServer(app:string, root:string, { terminal = 
     const renewed = await attempt(replacement);
     assert.equal(renewed.status, 200);
     cookie = renewed.headers.get('set-cookie')?.split(';')[0]??'';
-    assert(cookie?.startsWith('linux_session='));
+    assert.match(cookie??'',/^linux_session_[a-f0-9]{20}=/);
     assert.equal((await authGet('/api/security')).status, 200);
     let revocationReader, revocationJob;
     if (terminal) {

@@ -26,7 +26,7 @@ test('Better Auth retains sessions across processes and persists logout revocati
           [
             '--input-type=module',
             '-e',
-            `const {login,cookieSession,logoutSession}=await import(${JSON.stringify(moduleURL)});const request=new Request('http://127.0.0.1:8791/',{headers:{cookie:'linux_session='+process.env.FIXTURE_COOKIE}});${code}`,
+            `const {login,cookieSession,logoutSession,sessionCookieName}=await import(${JSON.stringify(moduleURL)});const request=new Request('http://127.0.0.1:8791/',{headers:{cookie:sessionCookieName()+'='+process.env.FIXTURE_COOKIE}});${code}`,
           ],
           { env: { ...env, FIXTURE_COOKIE: cookie } },
         )
