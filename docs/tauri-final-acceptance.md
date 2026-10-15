@@ -25,3 +25,7 @@
 - packaging/tastedev-linux.service: 8791 loopback, 별도 설치 상태·인증 경로.
 - 최신 소스 408개 운영 빌드 성공(IJEpvynamcuHVE1vxNPVO), 동일 빌드 HTTP 16개 그룹 성공. 103번 설치 Chrome에서 nginx 파일 추가 버튼과 트리 너비 조절도 확인했습니다. 이 결과는 Tauri 창 확인을 대신하지 않습니다.
 - 실제 설치 모드 노화된 세션 GUI 갱신은 기존 독립 DB 증거 PASS. 실제 여러 날 경과 관측은 별도이며 없던 증거를 성공으로 쓰지 않습니다.
+
+## 작업표시줄 아이콘 연결
+
+Linux GTK 앱 ID를 `com.gxsoft.linux`로 활성화하고 설치 실행 항목을 `com.gxsoft.linux.desktop`으로 맞춥니다. `StartupWMClass`도 같은 값을 사용하며 `Icon=tastedev-linux`는 hicolor의 PNG/SVG 아이콘을 가리킵니다. 업데이트 후 기존 앱을 종료하고 다시 실행해야 합니다. 이전 실행 항목을 작업표시줄에 고정했다면 새 실행 항목으로 다시 고정해야 할 수 있습니다. 실제 작업표시줄 모양은 네이티브 GUI 검수로 별도 확인합니다.

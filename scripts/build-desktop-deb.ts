@@ -24,12 +24,12 @@ for(const line of libraries.split('\n')){
 }
 const icon=await readFile('src-tauri/icons/icon.png');const iconSize=icon.readUInt32BE(16);if(icon.readUInt32BE(20)!==iconSize||iconSize<16)throw Error('Invalid square desktop icon');
 const iconDirectory=`usr/share/icons/hicolor/${iconSize}x${iconSize}/apps`;
-await exec('/usr/bin/desktop-file-validate',['packaging/tastedev-linux-desktop.desktop']);
+await exec('/usr/bin/desktop-file-validate',['packaging/com.gxsoft.linux.desktop']);
 const artifact=await mkdtemp(path.join(buildWorkspace,'desktop-package-')),root=path.join(artifact,'stage');await mkdir(root,{mode:0o700});
 try{
  for(const dir of ['DEBIAN','usr/bin','usr/share/applications',iconDirectory])await mkdir(path.join(root,dir),{recursive:true,mode:0o755});
  await copyFile(binary,path.join(root,'usr/bin/tastedev-linux-desktop'));await chmod(path.join(root,'usr/bin/tastedev-linux-desktop'),0o755);
- await copyFile('packaging/tastedev-linux-desktop.desktop',path.join(root,'usr/share/applications/tastedev-linux.desktop'));await chmod(path.join(root,'usr/share/applications/tastedev-linux.desktop'),0o644);
+ await copyFile('packaging/com.gxsoft.linux.desktop',path.join(root,'usr/share/applications/com.gxsoft.linux.desktop'));await chmod(path.join(root,'usr/share/applications/com.gxsoft.linux.desktop'),0o644);
  await copyFile('src-tauri/icons/icon.png',path.join(root,iconDirectory,'tastedev-linux.png'));await chmod(path.join(root,iconDirectory,'tastedev-linux.png'),0o644);
  await mkdir(path.join(root,'usr/share/icons/hicolor/scalable/apps'),{recursive:true,mode:0o755});
  await copyFile('src-tauri/icons/icon.svg',path.join(root,'usr/share/icons/hicolor/scalable/apps/tastedev-linux.svg'));await chmod(path.join(root,'usr/share/icons/hicolor/scalable/apps/tastedev-linux.svg'),0o644);

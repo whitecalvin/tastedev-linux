@@ -34,9 +34,9 @@ try{
  const iconDir=`usr/share/icons/hicolor/${size}x${size}/apps`;
  for(const dir of ['DEBIAN','usr/bin','usr/share/applications',iconDir])await mkdir(join(stage,dir),{recursive:true,mode:0o755});
  await writeFile(join(stage,'usr/bin/tastedev-linux-desktop'),binary,{mode:0o755});
- await copyFile('packaging/tastedev-linux-desktop.desktop',join(stage,'usr/share/applications/tastedev-linux.desktop'));
- await chmod(join(stage,'usr/share/applications/tastedev-linux.desktop'),0o644);
- await exec('/usr/bin/desktop-file-validate',[join(stage,'usr/share/applications/tastedev-linux.desktop')]);
+ await copyFile('packaging/com.gxsoft.linux.desktop',join(stage,'usr/share/applications/com.gxsoft.linux.desktop'));
+ await chmod(join(stage,'usr/share/applications/com.gxsoft.linux.desktop'),0o644);
+ await exec('/usr/bin/desktop-file-validate',[join(stage,'usr/share/applications/com.gxsoft.linux.desktop')]);
  await writeFile(join(stage,iconDir,'tastedev-linux.png'),icon,{mode:0o644});
  await writeFile(join(stage,'DEBIAN/control'),`Package: tastedev-linux-desktop\nVersion: ${version}\nArchitecture: amd64\nMaintainer: GXSOFT\nDepends: ${[...dependencies].sort().join(', ')}\nSection: admin\nPriority: optional\nDescription: Tastedev Linux Tauri desktop console\n Native desktop window for the local Tastedev Linux server.\n`,{mode:0o644});
  const file=join(root,`tastedev-linux-desktop_${version}_amd64.deb`);

@@ -7,5 +7,5 @@ Comment[ko]=Linux 서버 운영 관리 워크스페이스
 Exec=/usr/bin/tastedev-linux-desktop
 Icon=tastedev-linux
 Terminal=false
-Categories=System;Utility;
-StartupWMClass=tastedev-linux
+Categories=System;
+StartupWMClass=com.gxsoft.linux
