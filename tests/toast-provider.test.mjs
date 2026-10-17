@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {transform,loadBindings} from 'next/dist/build/swc/index.js';
 
-test('shared notifications stack, dismiss independently, repeat events and clear on page unmount',async()=>{
+test('shared notifications stack, dismiss independently, repeat events and clear on page unmount',async(t)=>{
  await loadBindings();
  const code=await transform(await readFile(new URL('../components/ui/toast-provider.tsx',import.meta.url),'utf8'),{filename:'toast-provider.tsx',jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
  let active,api=null;
@@ -29,6 +29,7 @@ test('shared notifications stack, dismiss independently, repeat events and clear
  first.render(ToastNotice,{message:'saved',kind:'success',eventId:2});assert.equal(provider.states[0].length,2,'another identical successful operation must be announced');
  second.dispose();assert.deepEqual(provider.states[0].map(n=>n.message),['saved'],'leaving a page clears its old error');
  const feedback=driver('feedback');let state=feedback.render(()=>useFeedback(''));state[1]('completed','success');state=feedback.render(()=>useFeedback(''));assert.equal(state[0],'completed');assert.equal(state[2],'success');const revision=state[3];state[1]('completed','error');state=feedback.render(()=>useFeedback(''));assert.equal(state[2],'error');assert.equal(state[3],revision+1);
+ t.mock.timers.enable({apis:['setTimeout']});const timed=driver('timed'),persistent=driver('persistent');persistent.render(ToastNotice,{message:'error stays',kind:'error'});timed.render(ToastNotice,{message:'saved for 3 seconds',kind:'success',eventId:1,autoDismissMs:3000});t.mock.timers.tick(2999);assert(provider.states[0].some(n=>n.id==='timed'));t.mock.timers.tick(1);assert(!provider.states[0].some(n=>n.id==='timed'));assert(provider.states[0].some(n=>n.id==='persistent'));timed.render(ToastNotice,{message:'saved for 3 seconds',kind:'success',eventId:2,autoDismissMs:3000});t.mock.timers.tick(1000);timed.render(ToastNotice,{message:'saved for 3 seconds',kind:'success',eventId:3,autoDismissMs:3000});t.mock.timers.tick(2000);assert(provider.states[0].some(n=>n.id==='timed'));t.mock.timers.tick(1000);assert(!provider.states[0].some(n=>n.id==='timed'));timed.dispose();persistent.dispose();t.mock.timers.reset();
  api=null;const standalone=driver('standalone');let fallback=standalone.render(ToastNotice,{message:'warning',kind:'warning'});fallback.props.children.props.onDismiss();assert.equal(standalone.render(ToastNotice,{message:'warning',kind:'warning'}),null);
  first.dispose();standalone.dispose();
 });

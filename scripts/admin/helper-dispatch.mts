@@ -49,6 +49,7 @@ export function apply(file:string,text:string,previous:string|null):string {
 export function dispatch(action:string,value:unknown):unknown|Promise<unknown> {
   if(!helperDispatchObject(value))fail('Invalid action payload');
   const input=value;
+  if(action==='certificate'&&input.operation==='inspect'){if(Object.keys(input).some(key=>key!=='operation'))fail('Invalid certificate inspection payload');return (async()=>(await mariaRuntime()).inspectCertificates())();}
   nginxMutationStateGuard(action, input);
   if (action === 'nginx-recovery-plan')
     return (async () => {

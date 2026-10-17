@@ -11,7 +11,7 @@ async function compile(file,mocks){
  await loadBindings();
  const result=await transform(await readFile(new URL(file,import.meta.url),'utf8'),{filename:file,jsc:{parser:{syntax:'typescript',tsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});
  const module={exports:{}};
- new Function('require','module','exports',result.code)(name=>name==='./package-ide-types'?packageIdeTypes:name==='./console-types'?consoleTypes:Object.hasOwn(mocks,name)?mocks[name]:name==='./ui/ide-split-layout'?{__esModule:true,default:'div'}:native(name),module,module.exports);
+ new Function('require','module','exports',result.code)(name=>name==='./package-ide-types'?packageIdeTypes:name==='./console-types'?consoleTypes:Object.hasOwn(mocks,name)?mocks[name]:name==='./certbot-certificate-details'?{__esModule:true,default:'certificate-details'}:name==='./ui/ide-split-layout'?{__esModule:true,default:'div'}:native(name),module,module.exports);
  return module.exports.default;
 }
 for(const kind of ['certbot','postgresql','redis','mariadb']){

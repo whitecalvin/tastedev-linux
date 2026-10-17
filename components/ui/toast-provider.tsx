@@ -20,16 +20,19 @@ export function ToastProvider({children}: {children: ReactNode}) {
 }
 
 /** A single notification per source; unmounting its page removes stale messages. */
-export function ToastNotice({message,kind='info',title,eventId}: {message?: string | null; kind?: ToastKind; title?: string; eventId?: number}) {
+export function ToastNotice({message,kind='info',title,eventId,autoDismissMs}: {message?: string | null; kind?: ToastKind; title?: string; eventId?: number; autoDismissMs?: number}) {
  const api=useContext(ToastContext),id=useId(),{t}=useLanguage();const marker=useRef<HTMLSpanElement>(null);const [dismissed,setDismissed]=useState('');
  useEffect(()=>{setDismissed('');},[message,eventId]);
  useEffect(()=>{
   if(!api)return;
   const dialog=marker.current?.parentElement?.closest<HTMLDialogElement>('dialog')??null;
-  const update=()=>{if(message&&(!dialog||dialog.open))api.publish({id,message,kind,title});else api.remove(id);};
+  let expired=false;
+  const update=()=>{if(!expired&&message&&(!dialog||dialog.open))api.publish({id,message,kind,title});else api.remove(id);};
   update();const observer=dialog?new MutationObserver(update):null;if(dialog)observer?.observe(dialog,{attributes:true,attributeFilter:['open']});
-  return()=>{observer?.disconnect();api.remove(id);};
- },[api,id,message,kind,title,eventId]);
+  const timer=message&&autoDismissMs&&autoDismissMs>0?setTimeout(()=>{expired=true;api.remove(id);},autoDismissMs):null;
+  return()=>{if(timer)clearTimeout(timer);observer?.disconnect();api.remove(id);};
+ },[api,id,message,kind,title,eventId,autoDismissMs]);
+ useEffect(()=>{if(api||!message||!autoDismissMs||autoDismissMs<=0)return;const timer=setTimeout(()=>setDismissed(message),autoDismissMs);return()=>clearTimeout(timer);},[api,message,eventId,autoDismissMs]);
  if(api)return <span ref={marker} hidden data-toast-source={id}/>;
  if(!message||dismissed===message)return null;
  return <ToastViewport><Toast message={message} kind={kind} title={title} closeLabel={t('닫기')} onDismiss={()=>setDismissed(message)}/></ToastViewport>;

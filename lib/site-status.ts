@@ -1,10 +1,14 @@
 import {hasErrorCode} from './error-code.ts';
-export type CertificateSummary = {name: string;status: 'valid'|'pending'|'expiring'|'expired'|'unavailable';expiresAt?: string;daysRemaining?: number;domains?: string;issuer?: string;validFrom?: string;fingerprint?: string;warning?: string};
+import {certificateSummary,type CertificateSummary} from './certificate-public.ts';
+export {certificateSummary} from './certificate-public.ts';
+export type {CertificateSummary} from './certificate-public.ts';
+import {runHelper} from './privilege.ts';
+import {securitySettings} from './security.ts';
 const detail=(value: unknown): string=>value instanceof Error?('code' in value&&typeof value.code==='string'&&value.code?value.code:value.message):String(value);
 import { readdir, readFile, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { nginxFormAvailability } from './nginx-form-import.ts';
-import { X509Certificate, createHash } from 'node:crypto';
+import { createHash } from 'node:crypto';
 export async function managedSites() {
   const directory = '/etc/nginx/conf.d';
   try {
@@ -31,29 +35,6 @@ export async function managedSites() {
     return { sites: [], warning: '운영 설정을 조회할 수 없습니다. ' + (detail(e)) };
   }
 }
-export function certificateSummary(pem: string|Buffer, name: string, now = Date.now()): CertificateSummary {
-  const cert = new X509Certificate(pem);
-  const expiry = new Date(cert.validTo).getTime();
-  if (!Number.isFinite(expiry)) throw new Error('인증서 만료 시각을 읽을 수 없습니다.');
-  const days = Math.floor((expiry - now) / 86400000);
-  return {
-    name,
-    domains: cert.subjectAltName || cert.subject,
-    issuer: cert.issuer,
-    validFrom: new Date(cert.validFrom).toISOString(),
-    expiresAt: new Date(expiry).toISOString(),
-    daysRemaining: days,
-    status:
-      now < new Date(cert.validFrom).getTime()
-        ? 'pending'
-        : now >= expiry
-          ? 'expired'
-          : days <= 30
-            ? 'expiring'
-            : 'valid',
-    fingerprint: cert.fingerprint256,
-  };
-}
 export async function certificates() {
   const directory = '/etc/letsencrypt/live';
   try {
@@ -70,6 +51,14 @@ export async function certificates() {
     }
     return { certificates: result, warning: null };
   } catch (e) {
+    if(hasErrorCode(e,'EACCES')||hasErrorCode(e,'EPERM')){
+      try{
+        if((await securitySettings()).settings.sudoWithoutPrompt){
+          const result=await runHelper('certificate',{operation:'inspect'});
+          if(Array.isArray(result.certificates)&&result.certificates.every(item=>item&&typeof item==='object'&&typeof item.name==='string'&&['valid','pending','expiring','expired','unavailable'].includes(item.status)))return {certificates:result.certificates as CertificateSummary[],warning:typeof result.warning==='string'?result.warning:null};
+        }
+      }catch{}
+    }
     return {
       certificates: [],
       warning:

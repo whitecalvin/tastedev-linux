@@ -806,6 +806,8 @@ function helperRuntimeHashes(value) {
 }
 const mariaModules = [
     'error-code.mjs',
+    'certificate-public.mjs',
+    'certificate-inspect.mjs',
     'database-config-backup.mjs',
     'postgresql-data-backup.mjs',
     'postgresql-data-context.mjs',
@@ -1034,7 +1036,9 @@ async function mariaRuntime() {
     const { inspectRedisContext } = await import(pathToFileURL(home + '/runtime/redis-context-inspect.mjs').href);
     const { backupCertificateNginx } = await import(pathToFileURL(home + '/runtime/certificate-nginx-backup.mjs').href);
     const { certificateExecution } = await import(pathToFileURL(home + '/runtime/certificate-execution.mjs').href);
+    const { inspectCertificates } = await import(pathToFileURL(home + '/runtime/certificate-inspect.mjs').href);
     return {
+        inspectCertificates,
         nginxSitePlan,
         applyNginxSite,
         nginxSiteRecoveryPlan,
@@ -1515,6 +1519,10 @@ function apply(file, text, previous) {
 function dispatch(action, value) {
     if (!helperDispatchObject(value)) fail('Invalid action payload');
     const input = value;
+    if (action === 'certificate' && input.operation === 'inspect') {
+        if (Object.keys(input).some((key)=>key !== 'operation')) fail('Invalid certificate inspection payload');
+        return (async ()=>(await mariaRuntime()).inspectCertificates())();
+    }
     nginxMutationStateGuard(action, input);
     if (action === 'nginx-recovery-plan') return (async ()=>{
         return (await mariaRuntime()).nginxRecoveryPlan(input);

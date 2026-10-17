@@ -7,7 +7,7 @@ declare function rootDir(dir:string):void;
 declare function hash(text:string|Buffer):string;
 function helperRuntimeHashes(value:unknown):value is Record<string,unknown>{return value!==null&&typeof value==='object'&&!Array.isArray(value);}
 export const mariaModules:readonly string[] = [
-  'error-code.mjs',
+  'error-code.mjs','certificate-public.mjs','certificate-inspect.mjs',
   'database-config-backup.mjs',
   'postgresql-data-backup.mjs',
   'postgresql-data-context.mjs',
@@ -281,7 +281,9 @@ export async function mariaRuntime() {
   const { inspectRedisContext }:typeof import('../../lib/redis-context-inspect.ts') = await import(pathToFileURL(home + '/runtime/redis-context-inspect.mjs').href);
   const { backupCertificateNginx }:typeof import('../../lib/certificate-nginx-backup.ts') = await import(pathToFileURL(home + '/runtime/certificate-nginx-backup.mjs').href);
   const { certificateExecution }:typeof import('../../lib/certificate-execution.ts') = await import(pathToFileURL(home + '/runtime/certificate-execution.mjs').href);
+  const {inspectCertificates}:typeof import('../../lib/certificate-inspect.ts') = await import(pathToFileURL(home + '/runtime/certificate-inspect.mjs').href);
   return {
+    inspectCertificates,
     nginxSitePlan,
     applyNginxSite,
     nginxSiteRecoveryPlan,
