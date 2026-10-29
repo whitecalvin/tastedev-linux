@@ -1,4 +1,4 @@
-const pages=new Set(['overview','packages','daemon','logs','recovery','audit','ide','terminal','security','settings']);
+const pages=new Set(['overview','packages','daemon','logs','recovery','audit','ide','terminal','security','settings','github']);
 const packages=new Set(['nginx','certbot','nodejs','postgresql','mariadb','redis']);
 export function consoleRoute(view:string,selectedPackage:string | null=null){
  if(['ide','server-settings'].includes(view)&&selectedPackage!==null&&packages.has(selectedPackage))return '/ide/packages/'+selectedPackage;

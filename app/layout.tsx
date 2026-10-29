@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Viewport } from 'next';
 import '@xterm/xterm/css/xterm.css';
 import './globals.css';
 import './console-design.css';
@@ -11,6 +12,7 @@ import {initialLanguage,languageCookieName,languageDirection} from '../lib/langu
 import {pageSession} from '../lib/page-session.ts';
 import {nginxTreePreferences} from '../lib/nginx-tree-preferences.ts';
 export const metadata = { title: 'LINUX · 서버 패키지 관리', description: '리눅스 서버 nginx, Certbot, Node.js 설치 관리' };
+export const viewport: Viewport = {width:'device-width',initialScale:1,maximumScale:1,userScalable:false,viewportFit:'cover'};
 export default async function Layout({ children }: { children: ReactNode }) {
  const [cookieStore,requestHeaders]=await Promise.all([cookies(),headers()]);
  const language=initialLanguage(cookieStore.get(languageCookieName)?.value,requestHeaders.get('accept-language') ?? undefined);

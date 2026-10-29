@@ -97,7 +97,7 @@ export async function verifyPackageServer(app:string, root:string, { terminal = 
     assert.equal(state.authenticated, false);
     for (const route of [
       ...['nginx', 'certbot', 'nodejs', 'postgresql', 'mariadb', 'redis'].map((kind) => '/ide/packages/' + kind),
-      '/terminal',
+      '/terminal','/github',
     ]) {
       const response = await get(route);
       await assertPageRedirect(response, '/login?next=' + encodeURIComponent(route));
@@ -106,6 +106,7 @@ export async function verifyPackageServer(app:string, root:string, { terminal = 
     assert.equal(denied.status, 401);
     for (const route of [
       '/api/config-source?kind=postgresql&path=%2Fetc%2Fpostgresql%2F16%2Fmain%2Fpostgresql.conf',
+      '/api/github','/api/github/deploy',
       '/api/node-app-env?id=fixture-app',
       '/api/node-app-service-status?id=fixture-app',
       '/api/mariadb-recovery-plan?root=%2Fetc%2Fmysql%2Fmy.cnf&target=%2Fetc%2Fmysql%2Fconf.d%2Fserver.cnf',
@@ -140,8 +141,13 @@ export async function verifyPackageServer(app:string, root:string, { terminal = 
         method: 'POST',
         headers: { Cookie: cookie, Origin: base, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(5000),
+        // Mutations include private-file fsync and authentication work on installed storage.
+        signal: AbortSignal.timeout(30000),
       });
+    const deploymentState=jsonRecord(await (await authGet('/api/github/deploy')).json());assert(Array.isArray(deploymentState.jobs));assert.equal(deploymentState.jobs.length,0);assert.equal((await post('/api/github/deploy',{action:'build',confirm:true,repository:'fixture/repo',branch:'main',directory:'',port:3000,environment:'',version:'a'.repeat(64)})).status,403);
+    const githubPage=await authGet('/github');assert.equal(githubPage.status,200);assert((await githubPage.text()).includes('GitHub'));
+    const githubState=jsonRecord(await (await authGet('/api/github')).json());assert.equal(githubState.connected,false);assert.equal(githubState.account,null);assert(!Object.hasOwn(githubState,'token'));
+    assert.equal((await post('/api/github',{action:'disconnect',version:githubState.version})).status,403,'read-only mode blocks GitHub connection changes');
     assert.equal((await packageFetch(base + '/api/terminal-context', { signal: AbortSignal.timeout(5000) })).status, 401);
     const context = jsonRecord(await (await authGet('/api/terminal-context')).json());
     assert.equal(typeof context.username, 'string');

@@ -1,0 +1,33 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile,mkdtemp,mkdir,writeFile,stat} from 'node:fs/promises';import {join} from 'node:path';import {createRequire} from 'node:module';import {EventEmitter} from 'node:events';import {PassThrough} from 'node:stream';import {transform,loadBindings} from 'next/dist/build/swc/index.js';
+const native=createRequire(import.meta.url);
+test('build engine runs isolated release commands without credentials in npm, persists safe output and keeps failed builds separate',async()=>{
+ const root=await mkdtemp('/mnt/data/build/tastedev-linux/github-build-engine-');const calls=[],helperCalls=[];let permitted=true,failBuild=false;let registry={apps:[],version:'a'.repeat(64)};
+ const token='github_pat_SYNTHETIC_BUILD_TOKEN_12345678';
+ const mocks={
+  './runtime-paths.ts':{stateRoot:()=>root},'./github.ts':{githubBuildAccess:async()=>({token})},'./github-deploy-input.ts':await import('../lib/github-deploy-input.ts'),
+  './security.ts':{assertFeature:async()=>{if(!permitted)throw Object.assign(Error('blocked'),{status:403});}},'./node-apps.ts':{nodeApps:async()=>registry,saveNodeApp:async({profile})=>{registry={apps:[profile],version:'b'.repeat(64)};}},'./node-app-service-plan.ts':{nodeAppServicePlan:async id=>({id,registryVersion:registry.version,files:[],serviceOptions:{}})},'./node-app-service-request.ts':{prepareNodeServiceInstall:async v=>v,prepareNodeServiceControl:async v=>v,prepareNodeServiceInspection:async id=>({id})},'./privilege.ts':{runHelper:async(action,payload)=>{helperCalls.push({action,payload});return action==='node-service-inspect'?{registered:helperCalls.some(v=>v.action==='node-service-install'),unitVersion:'f'.repeat(64)}:{changed:true};}},'./node-app-service-status.ts':{nodeAppServiceStatus:async()=>({ActiveState:'active'})},
+  'node:child_process':{spawn:(executable,args,options)=>{
+   const [bin,command]=JSON.parse(args[2]);calls.push({bin,command,options,runner:args[1]});const child=new EventEmitter();child.stdin=new PassThrough();child.stdout=new PassThrough();child.stderr=new PassThrough();
+   setImmediate(async()=>{try{
+    if(bin==='git'){const directory=command.at(-1);await mkdir(join(directory,'.git'),{recursive:true});await writeFile(join(directory,'.git','packed-refs'),'a'.repeat(40)+' refs/remotes/origin/main\n');await writeFile(join(directory,'package.json'),JSON.stringify({dependencies:{next:'fixture'},scripts:{build:'next build'}}));await writeFile(join(directory,'package-lock.json'),'{}');await mkdir(join(directory,'node_modules/next/dist/bin'),{recursive:true});await writeFile(join(directory,'node_modules/next/dist/bin/next'),'// fixture only');}
+    if(bin==='npm'&&command[0]==='run'){child.stdout.write('sample '+token+' and env secret fixture-database-value\n');if(!failBuild){await mkdir(join(options.cwd,'.next'),{recursive:true});await writeFile(join(options.cwd,'.next/BUILD_ID'),'fixture');}}
+    child.stdout.end();child.stderr.end();child.emit('close',failBuild&&bin==='npm'&&command[0]==='run'?1:0);
+   }catch(e){child.emit('error',e);}});return child;
+  }}
+ };
+ await loadBindings();const {code}=await transform(await readFile(new URL('../lib/github-deploy.ts',import.meta.url),'utf8'),{filename:'github-deploy.ts',jsc:{parser:{syntax:'typescript'},target:'es2022'},module:{type:'commonjs'}});const m={exports:{}};
+ new Function('require','module','exports','fetch',code)(name=>name in mocks?mocks[name]:native(name),m,m.exports,async url=>{assert.equal(url,'http://127.0.0.1:3000/');return new Response('fixture',{status:200});});const api=m.exports;
+ const input={repository:'fixture/next-site',branch:'main',directory:'',port:3000,environment:'DATABASE_URL=fixture-database-value',version:'a'.repeat(64)};
+ permitted=false;await assert.rejects(api.startGitHubBuild(input),{status:403});assert.equal(calls.length,0);permitted=true;
+ const job=await api.startGitHubBuild(input);await assert.rejects(api.startGitHubBuild(input),{status:409});
+ async function done(id){for(let n=0;n<100;n++){const jobs=await api.deploymentJobs();const item=jobs.find(v=>v.id===id);if(item.state!=='building')return item;await new Promise(r=>setTimeout(r,10));}throw Error('fixture timed out');}
+ const ready=await done(job.id);assert.equal(ready.state,'ready',ready.notice);assert.equal(ready.commit,'a'.repeat(40));assert(!ready.log.includes(token));assert(!ready.log.includes('fixture-database-value'));assert(ready.log.includes('[숨김]'));assert(!('owner' in ready));
+ assert.deepEqual(calls.map(c=>[c.bin,c.command[0]]),[['git','-c'],['npm','ci'],['npm','run']]);for(const call of calls.filter(c=>c.bin==='npm')){assert(!JSON.stringify(call.options.env).includes(token));assert(!JSON.stringify(call.options.env).includes('GIT_CONFIG_VALUE'));assert(!('LINUX_AUTH_ROOT' in call.options.env));assert(call.options.env.HOME.startsWith(root));assert(call.options.env.TMPDIR.startsWith(root));}
+ const project=join(root,'github-deployments/jobs',job.id,'source');assert.equal((await stat(join(project,'.env.production'))).mode&0o777,0o600);const entry=await readFile(join(project,'tastedev-next-server.mjs'),'utf8');assert(entry.includes('127.0.0.1'));assert(entry.includes('3000'));
+ const deployed=await api.deployGitHubBuild(job.id);assert.equal(deployed.state,'deployed');assert.deepEqual(helperCalls.map(v=>v.action),['node-service-inspect','node-service-install','node-service-control']);assert.equal(helperCalls.at(-1).payload.operation,'restart');assert.equal(registry.apps[0].entry,'server.mjs');
+ const managedDirectory=registry.apps[0].directory;await api.deployGitHubBuild(job.id);assert.equal(registry.apps[0].directory,managedDirectory);assert(helperCalls.some(v=>v.action==='node-service-update'));
+ const monitor=native('node:child_process').spawn(process.execPath,['-e',calls[0].runner,JSON.stringify([process.execPath,['-e',"console.log('fixture-ready');setInterval(()=>{},1000)"],10000])],{stdio:['pipe','pipe','pipe'],env:{PATH:'/usr/bin:/bin'}});
+ await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{monitor.kill('SIGTERM');reject(Error('monitor readiness timeout'));},3000);monitor.stdout.once('data',()=>{clearTimeout(timer);resolve();});monitor.once('error',reject);});
+ const stopped=new Promise((resolve,reject)=>{const timer=setTimeout(()=>{monitor.kill('SIGTERM');reject(Error('parent disconnect did not stop command'));},3000);monitor.once('exit',code=>{clearTimeout(timer);resolve(code);});});monitor.stdin.end();assert.notEqual(await stopped,0);
+ failBuild=true;const failed=await api.startGitHubBuild(input);assert.equal((await done(failed.id)).state,'failed');assert.equal((await api.deploymentJobs()).find(v=>v.id===job.id).state,'deployed');
+});

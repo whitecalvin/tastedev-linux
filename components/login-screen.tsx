@@ -140,6 +140,7 @@ export default function LoginScreen({ setupDirectory, packaged, storageUnavailab
               });
             }}
           >
+            <span className='auth-access-mark' aria-hidden='true'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><rect x='5' y='10' width='14' height='11' rx='2'/><path d='M8 10V7a4 4 0 0 1 8 0v3M12 14v3'/></svg></span>
             <span className='auth-kicker'>SECURE ACCESS</span>
             <h2>{t('관리자 로그인')}</h2>
             <p className='hint'>{t('로그인 후 서버 관리 기능을 사용할 수 있습니다.')}</p>

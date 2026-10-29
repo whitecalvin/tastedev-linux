@@ -130,4 +130,17 @@ test('nginx tree renders site folders and include selection opens its discovered
  assert.equal(state[2].node.children[2].children[0].label,'proxy_pass http://127.0.0.1:3000');
  assert.equal(conf.source,'server { listen 8080; }');
 
+ state[8]=null;cursor=0;buttons.length=0;
+ visit(module.exports.default({data:{root:'/etc/nginx',files:[confMain,conf]}}));
+ const addFile=buttons.find(button=>button.props['aria-label']==='conf.d/ 설정 파일 추가');assert.ok(addFile);assert.equal(addFile.props.variant,'ghost');
+ let prevented=false,stopped=false;addFile.props.onClick({preventDefault(){prevented=true;},stopPropagation(){stopped=true;}});assert(prevented&&stopped,'adding a file must not toggle the folder');
+ cursor=0;const dialogTree=module.exports.default({data:{root:'/etc/nginx',files:[confMain,conf]}});
+ let fileDialog;function findFileDialog(node){if(!node||typeof node!=='object')return;if(node.type?.name==='NginxNewFileDialog')fileDialog=node;React.Children.forEach(toastTestChildren(node),findFileDialog);}findFileDialog(dialogTree);assert.ok(fileDialog);
+ assert.match(fileDialog.props.onCreate('../escape.conf'),/파일명/);
+ assert.match(fileDialog.props.onCreate('vhost_tastedev.conf'),/이미/);
+ assert.equal(fileDialog.props.onCreate('new-vhost.conf'),null);
+ assert.equal(state[2].file.path,'/etc/nginx/conf.d/new-vhost.conf');assert.equal(state[2].node,null);
+ assert.equal(draftState[state[2].file.path].baseline,'');assert.equal(draftState[state[2].file.path].source,'# new-vhost.conf\n');
+ cursor=0;const addedConfFileTree=module.exports.default({data:{root:'/etc/nginx',files:[confMain,conf]}});let serialized='';function names(node){if(!node||typeof node!=='object')return;if(node.type==='button')serialized+=JSON.stringify(node.props.children);React.Children.forEach(toastTestChildren(node),names);}names(addedConfFileTree);assert.match(serialized,/new-vhost.conf/);
+
 });
